@@ -1,0 +1,44 @@
+{% extends "matches/base.html" %}
+
+{% block title %}Home · Khel.ai MVP{% endblock %}
+
+{% block content %}
+<section class="mb-8 rounded-3xl border border-slate-800 bg-gradient-to-br from-slate-900 to-slate-950 p-8">
+  <p class="mb-2 text-sm uppercase tracking-[0.25em] text-emerald-300">Live Scoring MVP</p>
+  <h1 class="mb-3 text-4xl font-bold">Same-day cricket scoring and public scoreboard</h1>
+  <p class="max-w-3xl text-slate-300">
+    Create teams and players in admin, then create a match and innings, enter balls, and view the public live page in another tab.
+  </p>
+</section>
+
+<section class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+  {% for match in matches %}
+    <article class="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+      <h2 class="text-xl font-semibold">{{ match.title }}</h2>
+      <p class="mt-2 text-sm text-slate-400">{{ match.team_1.name }} vs {{ match.team_2.name }}</p>
+      <p class="text-sm text-slate-400">{{ match.venue }}</p>
+
+      <div class="mt-4 flex flex-wrap gap-2">
+        <a href="{{ match.get_absolute_url }}" class="rounded-lg border border-slate-700 px-3 py-2 text-sm">
+          Match View
+        </a>
+
+        {% with latest=match.innings.last %}
+          {% if latest %}
+            <a href="{% url 'innings_scoring' latest.pk %}" class="rounded-lg border border-slate-700 px-3 py-2 text-sm">
+              Score Innings
+            </a>
+            <a href="{% url 'live_match' match.pk %}" class="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-slate-950">
+              Live Page
+            </a>
+          {% endif %}
+        {% endwith %}
+      </div>
+    </article>
+  {% empty %}
+    <div class="rounded-2xl border border-dashed border-slate-700 bg-slate-900 p-6 text-slate-300">
+      No matches yet.
+    </div>
+  {% endfor %}
+</section>
+{% endblock %}

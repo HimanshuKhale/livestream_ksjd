@@ -1,0 +1,108 @@
+{% extends "matches/base.html" %}
+
+{% block title %}{{ title }} · Khel.ai MVP{% endblock %}
+
+{% block content %}
+<section class="grid gap-8 xl:grid-cols-[0.9fr_1.25fr]">
+  <aside class="glass-card relative overflow-hidden rounded-[2rem] border border-white/10 p-8">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.14),transparent_30%)]"></div>
+
+    <div class="relative z-10">
+      <div class="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-300">
+        Setup Console
+      </div>
+
+      <h1 class="max-w-lg text-4xl font-black leading-tight tracking-tight">
+        {{ title }}
+      </h1>
+
+      <p class="mt-4 max-w-xl text-sm leading-7 text-slate-300">
+        Use this page to create the base entities for the live scoring system.
+        Keep the form structured, accurate, and ready for downstream analytics.
+      </p>
+
+      <div class="mt-8 grid gap-4">
+        <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
+          <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Why this matters</p>
+          <p class="mt-2 text-sm leading-7 text-slate-300">
+            Clean match and innings setup is the foundation for live scoring,
+            scoreboard updates, analytics APIs, and student-built intelligence modules.
+          </p>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2">
+          <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Output</p>
+            <p class="mt-2 text-lg font-semibold text-white">Stable base entity</p>
+            <p class="mt-1 text-sm text-slate-400">Ready for scoring + APIs</p>
+          </div>
+
+          <div class="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Design goal</p>
+            <p class="mt-2 text-lg font-semibold text-white">Fast + reliable</p>
+            <p class="mt-1 text-sm text-slate-400">Made for same-day operations</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <section class="glass-card rounded-[2rem] border border-white/10 p-8 shadow-2xl shadow-black/30">
+    <div class="mb-8 flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <p class="text-xs uppercase tracking-[0.22em] text-slate-400">Form</p>
+        <h2 class="mt-2 text-2xl font-bold text-white">
+          {% if "Match" in title %}
+            Match configuration
+          {% else %}
+            Innings configuration
+          {% endif %}
+        </h2>
+      </div>
+
+      <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
+        Fill all important fields carefully
+      </div>
+    </div>
+
+    <form method="post" class="space-y-8">
+      {% csrf_token %}
+
+      <div class="grid gap-5 md:grid-cols-2">
+        {% for field in form %}
+          <div class="field-shell {% if field.name == 'title' or field.name == 'tournament_name' or field.name == 'venue' or field.name == 'stream_url' %}md:col-span-2{% endif %}">
+            <label class="mb-2 block text-sm font-semibold text-slate-200">
+              {{ field.label }}
+            </label>
+
+            {{ field }}
+
+            {% if field.help_text %}
+              <p class="mt-2 text-xs leading-6 text-slate-400">{{ field.help_text }}</p>
+            {% endif %}
+
+            {% for error in field.errors %}
+              <p class="mt-2 text-xs font-medium text-rose-400">{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-6">
+        <p class="text-sm text-slate-400">
+          Save this first, then move to scoring and live view.
+        </p>
+
+        <div class="flex gap-3">
+          <a href="/" class="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-slate-200 transition hover:bg-white/10">
+            Cancel
+          </a>
+          <button type="submit" class="rounded-2xl bg-emerald-400 px-6 py-3 text-sm font-bold text-slate-950 shadow-lg shadow-emerald-500/20 transition hover:scale-[1.02]">
+            Save {{ title }}
+          </button>
+        </div>
+      </div>
+    </form>
+  </section>
+</section>
+{% endblock %}

@@ -1,0 +1,130 @@
+{% extends "matches/live_base.html" %}
+
+{% block title %}Live: {{ match.title }}{% endblock %}
+
+{% block content %}
+<div class="relative -m-6 h-[calc(100vh-100px)] overflow-hidden bg-black lg:-m-10">
+    
+    <div class="absolute inset-0 z-0">
+        {% if match.stream_url %}
+            <iframe
+
+              class="h-full w-full"
+
+              src="{{ match.stream_url }}"
+
+              title="Live Stream"
+
+              allow="autoplay; encrypted-media; picture-in-picture"
+
+              allowfullscreen
+
+              referrerpolicy="strict-origin-when-cross-origin">
+
+            </iframe>
+        {% else %}
+            <div class="flex h-full w-full items-center justify-center bg-slate-900 text-slate-500">
+                <p class="animate-pulse">Waiting for broadcast signal...</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="absolute bottom-10 left-0 right-0 z-10 flex flex-col items-center px-6">
+        
+        <div class="mb-2 flex items-center gap-2 self-start rounded-md bg-red-600 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-lg">
+            <span class="h-2 w-2 animate-pulse rounded-full bg-white"></span>
+            Live
+        </div>
+
+        <div id="scoreboard-root" class="flex w-full max-w-6xl items-stretch overflow-hidden rounded-lg border border-white/10 bg-slate-950/90 shadow-2xl backdrop-blur-md">
+            <div class="flex w-full animate-pulse items-center justify-center py-4 text-slate-400">
+                Synchronizing Broadcast Data...
+            </div>
+        </div>
+        
+        <div id="recent-balls-root" class="mt-2 flex w-full max-w-6xl gap-2 overflow-x-auto py-1 no-scrollbar">
+            </div>
+    </div>
+</div>
+
+<style>
+    /* Professional broadcast styling tweaks */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    /* Animation for score updates */
+    @keyframes highlight {
+        0% { background-color: rgba(16, 185, 129, 0.5); }
+        100% { background-color: transparent; }
+    }
+    .score-update { animation: highlight 1.5s ease-out; }
+</style>
+
+<script>
+async function loadScoreboard() {
+    const root = document.getElementById("scoreboard-root");
+    const recentRoot = document.getElementById("recent-balls-root");
+    
+    try {
+        const response = await fetch("{% url 'scoreboard_api' match.pk %}");
+        const data = await response.json();
+
+        // 1. Update Main Score Bar (Professional Horizontal Layout)
+        root.innerHTML = `
+            <div class="flex flex-col justify-center bg-indigo-900 px-6 py-2 text-white border-r border-white/10">
+                <span class="text-[10px] uppercase tracking-tighter opacity-70">Match</span>
+                <span class="whitespace-nowrap font-bold">{{ match.title|truncatechars:15 }}</span>
+            </div>
+
+            <div class="flex flex-1 items-center justify-between px-8">
+                <div class="flex items-center gap-4">
+                    <span class="text-xl font-black uppercase tracking-widest text-emerald-400">${data.batting_team || "TEAM"}</span>
+                    <span class="text-3xl font-black text-white tabular-nums">${data.score || "0-0"}</span>
+                </div>
+                
+                <div class="flex gap-6 text-white/80">
+                    <div class="flex flex-col items-center">
+                        <span class="text-[10px] uppercase opacity-60">Overs</span>
+                        <span class="font-mono font-bold text-lg">${data.overs || "0.0"}</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <span class="text-[10px] uppercase opacity-60">Run Rate</span>
+                        <span class="font-mono font-bold text-lg text-emerald-300">${data.run_rate ?? "0.0"}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hidden lg:flex items-center bg-white/5 px-6 gap-6 border-l border-white/10">
+                ${data.batters?.[0] ? `
+                    <div class="flex flex-col">
+                        <span class="text-[10px] uppercase opacity-50">Batting</span>
+                        <span class="text-sm font-bold text-white">${data.batters[0].name} ${data.batters[0].runs}*</span>
+                    </div>
+                ` : ''}
+                ${data.bowlers?.[0] ? `
+                    <div class="flex flex-col border-l border-white/10 pl-6">
+                        <span class="text-[10px] uppercase opacity-50">Bowling</span>
+                        <span class="text-sm font-bold text-white">${data.bowlers[0].name} ${data.bowlers[0].wickets}-${data.bowlers[0].runs_conceded}</span>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+
+        // 2. Update Recent Balls (Ticker Style)
+        recentRoot.innerHTML = (data.recent_balls || []).map(ball => `
+            <div class="flex items-center gap-2 whitespace-nowrap rounded-md bg-slate-900/80 px-3 py-1 border border-white/5 text-xs text-white backdrop-blur-sm">
+                <span class="opacity-50">${ball.over_ball}</span>
+                <span class="font-bold ${ball.label.includes('W') ? 'text-red-500' : ball.label.includes('4') || ball.label.includes('6') ? 'text-yellow-400' : ''}">${ball.label}</span>
+            </div>
+        `).join("");
+
+    } catch (error) {
+        console.error("Broadcast Sync Error:", error);
+    }
+}
+
+// Initial load and sync every 5s
+loadScoreboard();
+setInterval(loadScoreboard, 5000);
+</script>
+{% endblock %}
