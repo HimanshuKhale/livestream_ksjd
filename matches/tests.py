@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.urls import reverse
 
 from .forms import BallEventForm
 from .models import BallEvent, Innings, Match, Player, Team
@@ -66,6 +67,17 @@ class ScoringStateEngineTests(TestCase):
         self.assertFalse(state.requires_new_bowler)
         self.assertEqual(state.suggested_next_batter_ids, [self.a4.id, self.a1.id, self.a3.id, self.a2.id])
 
+    def test_scoring_page_preloads_first_ball_defaults(self):
+        response = self.client.get(reverse("innings_scoring", args=[self.innings.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["form"].initial["over_number"], 1)
+        self.assertEqual(response.context["form"].initial["ball_number"], 1)
+        self.assertEqual(response.context["form"].initial["runs_off_bat"], 0)
+        self.assertEqual(response.context["form"].initial["wicket_fell"], False)
+        self.assertEqual(response.context["next_ball_context"]["over_number"], 1)
+        self.assertEqual(response.context["next_ball_context"]["ball_number"], 1)
+
     def test_legal_delivery_advances_ball_and_preserves_players(self):
         self._ball()
 
@@ -76,6 +88,38 @@ class ScoringStateEngineTests(TestCase):
         self.assertEqual(state.non_striker_id, self.a2.id)
         self.assertEqual(state.bowler_id, self.b1.id)
         self.assertFalse(state.requires_new_bowler)
+
+    def test_next_ball_initial_resets_event_specific_fields(self):
+        self._ball(
+            over_number=1,
+            ball_number=3,
+            runs_off_bat=4,
+            extras=1,
+            extra_type="bye",
+            wicket_fell=True,
+            wicket_type="caught",
+            dismissed_player=self.a1,
+            fielder_name="Point",
+            shot_type="cut",
+            shot_zone="off-side",
+            notes="Edged behind point.",
+        )
+
+        state = get_scoring_state(self.innings)
+        initial = state.as_form_initial()
+
+        self.assertEqual((initial["over_number"], initial["ball_number"]), (1, 4))
+        self.assertEqual(initial["runs_off_bat"], 0)
+        self.assertEqual(initial["extras"], 0)
+        self.assertEqual(initial["extra_type"], "")
+        self.assertTrue(initial["is_legal_delivery"])
+        self.assertFalse(initial["wicket_fell"])
+        self.assertEqual(initial["wicket_type"], "")
+        self.assertIsNone(initial["dismissed_player"])
+        self.assertEqual(initial["fielder_name"], "")
+        self.assertEqual(initial["shot_type"], "")
+        self.assertEqual(initial["shot_zone"], "")
+        self.assertEqual(initial["notes"], "")
 
     def test_odd_runs_swap_strike(self):
         self._ball(runs_off_bat=1)
@@ -121,6 +165,18 @@ class ScoringStateEngineTests(TestCase):
         self.assertEqual(state.non_striker_id, self.a2.id)
         self.assertEqual(state.suggested_next_batter_ids, [self.a4.id, self.a3.id])
 
+    def test_wicket_without_dismissed_player_still_excludes_inferred_out_batter(self):
+        self._ball(
+            wicket_fell=True,
+            wicket_type="bowled",
+        )
+
+        state = get_scoring_state(self.innings)
+
+        self.assertIsNone(state.striker_id)
+        self.assertEqual(state.non_striker_id, self.a2.id)
+        self.assertEqual(state.suggested_next_batter_ids, [self.a4.id, self.a3.id])
+
     def test_form_forces_wides_and_no_balls_to_be_non_legal(self):
         form = BallEventForm(
             data={
@@ -146,3 +202,35 @@ class ScoringStateEngineTests(TestCase):
 
         self.assertTrue(form.is_valid())
         self.assertFalse(form.cleaned_data["is_legal_delivery"])
+
+    def test_form_keeps_manual_override_fields_editable(self):
+        self._ball(over_number=1, ball_number=1)
+
+        form = BallEventForm(
+            data={
+                "over_number": 4,
+                "ball_number": 5,
+                "striker": self.a2.id,
+                "non_striker": self.a3.id,
+                "bowler": self.b2.id,
+                "runs_off_bat": 2,
+                "extras": 0,
+                "extra_type": "",
+                "is_legal_delivery": True,
+                "wicket_fell": False,
+                "wicket_type": "",
+                "dismissed_player": "",
+                "fielder_name": "",
+                "shot_type": "drive",
+                "shot_zone": "mid-off",
+                "notes": "Manual override",
+            },
+            innings=self.innings,
+        )
+
+        self.assertTrue(form.is_valid())
+        self.assertEqual(form.cleaned_data["over_number"], 4)
+        self.assertEqual(form.cleaned_data["ball_number"], 5)
+        self.assertEqual(form.cleaned_data["striker"], self.a2)
+        self.assertEqual(form.cleaned_data["non_striker"], self.a3)
+        self.assertEqual(form.cleaned_data["bowler"], self.b2)

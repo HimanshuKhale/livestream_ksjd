@@ -174,11 +174,9 @@ def _should_swap_strike(event):
 
 
 def _available_batter_ids(innings, active_batter_ids):
-    dismissed_ids = set(
-        innings.ball_events.filter(wicket_fell=True)
-        .exclude(dismissed_player__isnull=True)
-        .values_list("dismissed_player_id", flat=True)
-    )
+    dismissed_ids = set()
+    for event in innings.ball_events.filter(wicket_fell=True).only("dismissed_player_id", "striker_id"):
+        dismissed_ids.add(event.dismissed_player_id or event.striker_id)
     excluded_ids = dismissed_ids | {player_id for player_id in active_batter_ids if player_id}
     return list(
         innings.batting_team.players.exclude(id__in=excluded_ids)
