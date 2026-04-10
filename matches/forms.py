@@ -1,5 +1,6 @@
 from django import forms
 from .models import BallEvent, Innings, Match
+from .scoring import normalize_event_data, validate_event_state
 
 
 def apply_form_control_styles(fields):
@@ -78,8 +79,10 @@ class BallEventForm(forms.ModelForm):
             "notes",
         ]
 
-    def __init__(self, *args, innings=None, **kwargs):
+    def __init__(self, *args, innings=None, scoring_state=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.innings = innings
+        self.scoring_state = scoring_state
 
         if innings is not None:
             batting_qs = innings.batting_team.players.all().order_by("name")
@@ -91,3 +94,16 @@ class BallEventForm(forms.ModelForm):
             self.fields["bowler"].queryset = bowling_qs
 
         apply_form_control_styles(self.fields)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        cleaned_data = normalize_event_data(cleaned_data)
+
+        if self.innings is None:
+            return cleaned_data
+
+        errors = validate_event_state(self.innings, cleaned_data)
+        for field, message in errors.items():
+            self.add_error(field, message)
+
+        return cleaned_data

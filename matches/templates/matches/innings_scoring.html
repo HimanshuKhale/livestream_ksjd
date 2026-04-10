@@ -60,6 +60,29 @@
   <section class="rounded-3xl border border-slate-800 bg-slate-900 p-5">
     <h2 class="mb-4 text-xl font-semibold">Enter Ball Event</h2>
 
+    <div class="mb-5 rounded-2xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-300">
+      <div class="mb-2 flex flex-wrap items-center gap-2">
+        <span class="font-semibold text-white">Next ball default:</span>
+        <span>{{ next_ball_context.over_number }}.{{ next_ball_context.ball_number }}</span>
+        {% if next_ball_context.requires_new_bowler %}
+          <span class="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs text-amber-300">Select new bowler</span>
+        {% endif %}
+      </div>
+      <div class="flex flex-col gap-1">
+        <span>Striker: {{ next_ball_context.striker_name|default:"Choose batter" }}</span>
+        <span>Non-striker: {{ next_ball_context.non_striker_name|default:"Choose batter" }}</span>
+        <span>Bowler: {{ next_ball_context.bowler_name|default:"Choose bowler" }}</span>
+      </div>
+      {% if suggested_batters %}
+        <div class="mt-3">
+          <span class="font-semibold text-white">Next batter suggestions:</span>
+          {% for player in suggested_batters %}
+            <span class="mt-2 inline-flex rounded-full border border-slate-700 px-3 py-1 text-xs">{{ player.name }}</span>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
     <form method="post" class="grid gap-4 md:grid-cols-2">
       {% csrf_token %}
 

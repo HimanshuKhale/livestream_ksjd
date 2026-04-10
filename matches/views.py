@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import BallEventForm, InningsForm, MatchForm
 from .models import Innings, Match
+from .scoring import get_scoring_state
 from .services import innings_summary
 
 
@@ -56,7 +57,15 @@ def innings_scoring(request, pk):
         pk=pk
     )
 
-    form = BallEventForm(request.POST or None, innings=innings)
+    scoring_state = get_scoring_state(innings)
+    form_kwargs = {
+        "innings": innings,
+        "scoring_state": scoring_state,
+    }
+    if request.method == "POST":
+        form = BallEventForm(request.POST, **form_kwargs)
+    else:
+        form = BallEventForm(initial=scoring_state.as_form_initial(), **form_kwargs)
 
     if request.method == "POST" and form.is_valid():
         ball = form.save(commit=False)
@@ -66,7 +75,20 @@ def innings_scoring(request, pk):
         return redirect("innings_scoring", pk=innings.pk)
 
     summary = innings_summary(innings)
-    events = innings.ball_events.select_related("striker", "bowler").order_by("-id")[:12]
+    events = innings.ball_events.select_related("striker", "non_striker", "bowler").order_by("-id")[:12]
+    suggested_batters = list(
+        innings.batting_team.players.filter(id__in=scoring_state.suggested_next_batter_ids).order_by("name")
+    )
+    batting_players = innings.batting_team.players.in_bulk()
+    bowling_players = innings.bowling_team.players.in_bulk()
+    next_ball_context = {
+        "over_number": scoring_state.over_number,
+        "ball_number": scoring_state.ball_number,
+        "striker_name": batting_players.get(scoring_state.striker_id).name if scoring_state.striker_id in batting_players else "",
+        "non_striker_name": batting_players.get(scoring_state.non_striker_id).name if scoring_state.non_striker_id in batting_players else "",
+        "bowler_name": bowling_players.get(scoring_state.bowler_id).name if scoring_state.bowler_id in bowling_players else "",
+        "requires_new_bowler": scoring_state.requires_new_bowler,
+    }
 
     return render(
         request,
@@ -74,8 +96,11 @@ def innings_scoring(request, pk):
         {
             "innings": innings,
             "form": form,
+            "scoring_state": scoring_state,
+            "next_ball_context": next_ball_context,
             "summary": summary,
             "events": events,
+            "suggested_batters": suggested_batters,
         },
     )
 
