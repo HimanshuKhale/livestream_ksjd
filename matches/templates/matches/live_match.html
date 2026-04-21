@@ -1,130 +1,249 @@
 {% extends "matches/live_base.html" %}
-
 {% block title %}Live: {{ match.title }}{% endblock %}
 
 {% block content %}
-<div class="relative -m-6 h-[calc(100vh-100px)] overflow-hidden bg-black lg:-m-10">
-    
-    <div class="absolute inset-0 z-0">
-        {% if match.stream_url %}
-            <iframe
+<div style="position: relative; width: 100%; height: 100vh; overflow: hidden;">
 
-              class="h-full w-full"
+  <!-- Background live stream -->
+  <div style="position: absolute; inset: 0; z-index: 0;">
+    {% if match.stream_url %}
+      <iframe
+        src="{{ match.stream_url }}"
+        title="Live Stream"
+        style="width: 100%; height: 100%; border: none;"
+        allow="autoplay; encrypted-media; picture-in-picture"
+        allowfullscreen
+        referrerpolicy="strict-origin-when-cross-origin">
+      </iframe>
+    {% else %}
+      <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #000; color: #888;">
+        <p>Waiting for broadcast signal...</p>
+      </div>
+    {% endif %}
+  </div>
 
-              src="{{ match.stream_url }}"
+  <!-- Top-left match info -->
+  <div style="
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    padding: 16px;
+    border-radius: 10px;
+    min-width: 260px;
+  ">
+    <h2 style="margin: 0 0 10px 0;">{{ match.title }}</h2>
 
-              title="Live Stream"
+    {% if innings %}
+      <p style="margin: 6px 0;"><strong>Innings:</strong> {{ innings.innings_number }}</p>
+      <p style="margin: 6px 0;"><strong>Batting:</strong> {{ innings.batting_team.name }}</p>
+      <p style="margin: 6px 0;"><strong>Bowling:</strong> {{ innings.bowling_team.name }}</p>
+    {% else %}
+      <p style="margin: 6px 0;">No innings available yet.</p>
+    {% endif %}
+  </div>
 
-              allow="autoplay; encrypted-media; picture-in-picture"
+  <!-- Top-right analytics widget -->
+  <div style="
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 340px;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.72);
+    color: #f3f3f3;
+    padding: 16px;
+    border-radius: 10px;
+  ">
+    <h2 style="margin-top: 0;">Live Analytics</h2>
 
-              allowfullscreen
+    <div id="analytics-widget">
 
-              referrerpolicy="strict-origin-when-cross-origin">
+      <!-- Slide 1: Current Batters -->
+      <div class="analytics-slide">
+        <h3 style="margin-top: 0;">Current Batters</h3>
 
-            </iframe>
+        {% if live_batting %}
+          <p>
+            <strong>Striker:</strong>
+            {% if live_batting.striker %}
+              {{ live_batting.striker.name }} *
+            {% else %}
+              Not set
+            {% endif %}
+          </p>
+
+          <p>
+            <strong>Non-Striker:</strong>
+            {% if live_batting.non_striker %}
+              {{ live_batting.non_striker.name }}
+            {% else %}
+              Not set
+            {% endif %}
+          </p>
         {% else %}
-            <div class="flex h-full w-full items-center justify-center bg-slate-900 text-slate-500">
-                <p class="animate-pulse">Waiting for broadcast signal...</p>
-            </div>
+          <p>No live batting state available.</p>
         {% endif %}
+      </div>
+
+      <!-- Slide 2: Bowler Momentum -->
+      <div class="analytics-slide" style="display:none;">
+        <h3 style="margin-top: 0;">Bowler Momentum</h3>
+
+        {% if innings %}
+          <p>
+            <label for="momentum-bowler-select"><strong>Select Bowler</strong></label><br>
+            <select id="momentum-bowler-select" style="
+    width: 100%;
+    margin-top: 6px;
+    background-color: #0B1E40;
+    color: white;
+    border: 1px solid #d513fc;
+    padding: 6px;
+    border-radius: 6px;
+  ">
+              <option value="">-- Select bowler --</option>
+              {% for player in bowling_players %}
+                <option value="{{ player.id }}">{{ player.name }}</option>
+              {% endfor %}
+            </select>
+          </p>
+
+          <p>
+            <button 
+                type="button" 
+                id="load-momentum-btn"
+                style="
+                    background-color: #2EB4A7;
+                    color: #0B1E40;
+                    border: none;
+                    padding: 6px 10px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                "
+                >
+                Load Momentum
+                </button>
+            
+            </p>
+
+          <div id="momentum-output">
+            <p>Select a bowler to load momentum.</p>
+          </div>
+        {% else %}
+          <p>No innings available yet.</p>
+        {% endif %}
+      </div>
+
     </div>
 
-    <div class="absolute bottom-10 left-0 right-0 z-10 flex flex-col items-center px-6">
-        
-        <div class="mb-2 flex items-center gap-2 self-start rounded-md bg-red-600 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-lg">
-            <span class="h-2 w-2 animate-pulse rounded-full bg-white"></span>
-            Live
-        </div>
-
-        <div id="scoreboard-root" class="flex w-full max-w-6xl items-stretch overflow-hidden rounded-lg border border-white/10 bg-slate-950/90 shadow-2xl backdrop-blur-md">
-            <div class="flex w-full animate-pulse items-center justify-center py-4 text-slate-400">
-                Synchronizing Broadcast Data...
-            </div>
-        </div>
-        
-        <div id="recent-balls-root" class="mt-2 flex w-full max-w-6xl gap-2 overflow-x-auto py-1 no-scrollbar">
-            </div>
+    <div style="margin-top: 16px; display: flex; gap: 12px;">
+      <button type="button" id="prev-slide-btn">Previous</button>
+      <button type="button" id="next-slide-btn">Next</button>
     </div>
+  </div>
 </div>
 
-<style>
-    /* Professional broadcast styling tweaks */
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    
-    /* Animation for score updates */
-    @keyframes highlight {
-        0% { background-color: rgba(16, 185, 129, 0.5); }
-        100% { background-color: transparent; }
-    }
-    .score-update { animation: highlight 1.5s ease-out; }
-</style>
-
 <script>
-async function loadScoreboard() {
-    const root = document.getElementById("scoreboard-root");
-    const recentRoot = document.getElementById("recent-balls-root");
-    
-    try {
-        const response = await fetch("{% url 'scoreboard_api' match.pk %}");
-        const data = await response.json();
+  const slides = document.querySelectorAll(".analytics-slide");
+  let currentSlideIndex = 0;
+  let selectedBowlerId = null;
 
-        // 1. Update Main Score Bar (Professional Horizontal Layout)
-        root.innerHTML = `
-            <div class="flex flex-col justify-center bg-indigo-900 px-6 py-2 text-white border-r border-white/10">
-                <span class="text-[10px] uppercase tracking-tighter opacity-70">Match</span>
-                <span class="whitespace-nowrap font-bold">{{ match.title|truncatechars:15 }}</span>
-            </div>
+  function showSlide(index) {
+    slides.forEach((slide, i) => {
+      slide.style.display = i === index ? "block" : "none";
+    });
+  }
 
-            <div class="flex flex-1 items-center justify-between px-8">
-                <div class="flex items-center gap-4">
-                    <span class="text-xl font-black uppercase tracking-widest text-emerald-400">${data.batting_team || "TEAM"}</span>
-                    <span class="text-3xl font-black text-white tabular-nums">${data.score || "0-0"}</span>
-                </div>
-                
-                <div class="flex gap-6 text-white/80">
-                    <div class="flex flex-col items-center">
-                        <span class="text-[10px] uppercase opacity-60">Overs</span>
-                        <span class="font-mono font-bold text-lg">${data.overs || "0.0"}</span>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <span class="text-[10px] uppercase opacity-60">Run Rate</span>
-                        <span class="font-mono font-bold text-lg text-emerald-300">${data.run_rate ?? "0.0"}</span>
-                    </div>
-                </div>
-            </div>
+  const prevBtn = document.getElementById("prev-slide-btn");
+  const nextBtn = document.getElementById("next-slide-btn");
 
-            <div class="hidden lg:flex items-center bg-white/5 px-6 gap-6 border-l border-white/10">
-                ${data.batters?.[0] ? `
-                    <div class="flex flex-col">
-                        <span class="text-[10px] uppercase opacity-50">Batting</span>
-                        <span class="text-sm font-bold text-white">${data.batters[0].name} ${data.batters[0].runs}*</span>
-                    </div>
-                ` : ''}
-                ${data.bowlers?.[0] ? `
-                    <div class="flex flex-col border-l border-white/10 pl-6">
-                        <span class="text-[10px] uppercase opacity-50">Bowling</span>
-                        <span class="text-sm font-bold text-white">${data.bowlers[0].name} ${data.bowlers[0].wickets}-${data.bowlers[0].runs_conceded}</span>
-                    </div>
-                ` : ''}
-            </div>
-        `;
+  if (prevBtn) {
+    prevBtn.addEventListener("click", function () {
+      currentSlideIndex = (currentSlideIndex - 1 + slides.length) % slides.length;
+      showSlide(currentSlideIndex);
+    });
+  }
 
-        // 2. Update Recent Balls (Ticker Style)
-        recentRoot.innerHTML = (data.recent_balls || []).map(ball => `
-            <div class="flex items-center gap-2 whitespace-nowrap rounded-md bg-slate-900/80 px-3 py-1 border border-white/5 text-xs text-white backdrop-blur-sm">
-                <span class="opacity-50">${ball.over_ball}</span>
-                <span class="font-bold ${ball.label.includes('W') ? 'text-red-500' : ball.label.includes('4') || ball.label.includes('6') ? 'text-yellow-400' : ''}">${ball.label}</span>
-            </div>
-        `).join("");
+  if (nextBtn) {
+    nextBtn.addEventListener("click", function () {
+      currentSlideIndex = (currentSlideIndex + 1) % slides.length;
+      showSlide(currentSlideIndex);
+    });
+  }
 
-    } catch (error) {
-        console.error("Broadcast Sync Error:", error);
+  function renderMomentum(data) {
+    const output = document.getElementById("momentum-output");
+    if (!output) return;
+
+    if (data.error) {
+      output.innerHTML = `<p>${data.error}</p>`;
+      return;
     }
-}
 
-// Initial load and sync every 5s
-loadScoreboard();
-setInterval(loadScoreboard, 5000);
+    output.innerHTML = `
+      <p><strong>Bowler:</strong> ${data.bowler_name}</p>
+      <p><strong>Balls Bowled:</strong> ${data.balls_bowled}</p>
+      <p><strong>Dot Balls:</strong> ${data.dot_balls}</p>
+      <p><strong>Wickets:</strong> ${data.wickets}</p>
+      <p><strong>Runs Conceded:</strong> ${data.runs_conceded}</p>
+      <p><strong>Boundary Balls:</strong> ${data.boundary_balls}</p>
+      <p><strong>Momentum Score:</strong> ${data.momentum_score}</p>
+    `;
+  }
+
+  function loadMomentum() {
+    if (!selectedBowlerId) return;
+
+    const output = document.getElementById("momentum-output");
+    if (!output) return;
+
+    output.innerHTML = "<p>Loading momentum. If the Render service is asleep, this may take some time.</p>";
+
+    fetch(`/api/innings/{{ innings.id }}/bowler/${selectedBowlerId}/momentum-proxy/`)
+      .then(async response => {
+        const data = await response.json();
+        return { ok: response.ok, data };
+      })
+      .then(({ ok, data }) => {
+        if (!ok || data.error) {
+          renderMomentum(data);
+          return;
+        }
+        renderMomentum(data);
+      })
+      .catch(error => {
+        output.innerHTML = "<p>Failed to load momentum.</p>";
+        console.error(error);
+      });
+  }
+
+  const loadBtn = document.getElementById("load-momentum-btn");
+  if (loadBtn) {
+    loadBtn.addEventListener("click", function () {
+      const select = document.getElementById("momentum-bowler-select");
+      selectedBowlerId = select ? select.value : null;
+
+      const output = document.getElementById("momentum-output");
+      if (!selectedBowlerId) {
+        if (output) {
+          output.innerHTML = "<p>Please select a bowler.</p>";
+        }
+        return;
+      }
+
+      loadMomentum();
+    });
+  }
+
+  setInterval(function () {
+    if (selectedBowlerId) {
+      loadMomentum();
+    }
+  }, 15000);
+
+  showSlide(currentSlideIndex);
 </script>
 {% endblock %}

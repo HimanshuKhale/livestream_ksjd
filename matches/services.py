@@ -100,3 +100,35 @@ def _ball_label(event):
         parts.append("W")
 
     return " ".join(parts)
+
+def build_bowler_momentum_payload(innings, player_id):
+    events = list(
+        innings.ball_events.select_related("bowler")
+        .filter(bowler_id=player_id)
+        .order_by("over_number", "ball_number", "id")
+    )
+
+    if not events:
+        return None
+
+    bowler_name = events[0].bowler.name
+
+    ball_events = []
+    for e in events:
+        ball_events.append({
+            "over_number": e.over_number,
+            "ball_number": e.ball_number,
+            "runs_off_bat": e.runs_off_bat,
+            "extras": e.extras,
+            "extra_type": e.extra_type or "",
+            "is_legal_delivery": e.is_legal_delivery,
+            "wicket_fell": e.wicket_fell,
+            "wicket_type": e.wicket_type or "",
+        })
+
+    return {
+        "innings_id": innings.id,
+        "player_id": player_id,
+        "bowler_name": bowler_name,
+        "ball_events": ball_events,
+    }

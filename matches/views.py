@@ -3,9 +3,10 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import BallEventForm, InningsForm, MatchForm
-from .models import Innings, Match
+from .models import Innings, Match, Player
 from .scoring import get_scoring_state
-from .services import innings_summary
+from .services import innings_summary, build_bowler_momentum_payload
+from .api_clients import call_bowler_momentum_api
 
 
 def home(request):
@@ -75,7 +76,6 @@ def innings_scoring(request, pk):
         return redirect("innings_scoring", pk=innings.pk)
 
     summary = innings_summary(innings)
-    events = innings.ball_events.select_related("striker", "non_striker", "bowler").order_by("-id")[:12]
     suggested_batters = list(
         innings.batting_team.players.filter(id__in=scoring_state.suggested_next_batter_ids).order_by("name")
     )
@@ -89,6 +89,7 @@ def innings_scoring(request, pk):
         "bowler_name": bowling_players.get(scoring_state.bowler_id).name if scoring_state.bowler_id in bowling_players else "",
         "requires_new_bowler": scoring_state.requires_new_bowler,
     }
+    previous_ball = scoring_state.previous_ball
 
     return render(
         request,
@@ -98,19 +99,34 @@ def innings_scoring(request, pk):
             "form": form,
             "scoring_state": scoring_state,
             "next_ball_context": next_ball_context,
+            "previous_ball": previous_ball,
             "summary": summary,
-            "events": events,
             "suggested_batters": suggested_batters,
         },
     )
-
 
 def live_match(request, match_id):
     match = get_object_or_404(
         Match.objects.select_related("team_1", "team_2"),
         pk=match_id
     )
-    innings = match.innings.order_by("-innings_number").first()
+    innings = match.innings.select_related("batting_team", "bowling_team").order_by("-innings_number").first()
+
+    live_batting = None
+    bowling_players = []
+
+    if innings:
+        scoring_state = get_scoring_state(innings)
+        batting_players = innings.batting_team.players.in_bulk()
+        bowling_players = list(innings.bowling_team.players.order_by("name"))
+
+        striker = batting_players.get(scoring_state.striker_id) if scoring_state.striker_id else None
+        non_striker = batting_players.get(scoring_state.non_striker_id) if scoring_state.non_striker_id else None
+
+        live_batting = {
+            "striker": striker,
+            "non_striker": non_striker,
+        }
 
     return render(
         request,
@@ -118,9 +134,10 @@ def live_match(request, match_id):
         {
             "match": match,
             "innings": innings,
+            "live_batting": live_batting,
+            "bowling_players": bowling_players,
         },
     )
-
 
 def scoreboard_api(request, match_id):
     match = get_object_or_404(
@@ -153,3 +170,33 @@ def scoreboard_api(request, match_id):
         "batters": summary["batters"][:5],
         "bowlers": summary["bowlers"][:5],
     })
+
+def bowler_momentum_proxy_api(request, innings_id, player_id):
+    innings = get_object_or_404(
+        Innings.objects.select_related("match", "batting_team", "bowling_team"),
+        pk=innings_id
+    )
+    get_object_or_404(Player, pk=player_id)
+
+    payload = build_bowler_momentum_payload(innings, player_id)
+
+    if payload is None:
+        return JsonResponse(
+            {"error": "No ball events found for this bowler in this innings."},
+            status=404,
+        )
+
+    try:
+        result = call_bowler_momentum_api(payload)
+    except requests.exceptions.Timeout:
+        return JsonResponse(
+            {"error": "Momentum API is waking up. Please try again in a few seconds."},
+            status=504,
+        )
+    except requests.exceptions.RequestException as exc:
+        return JsonResponse(
+            {"error": "Momentum API request failed.", "detail": str(exc)},
+            status=502,
+        )
+
+    return JsonResponse(result)

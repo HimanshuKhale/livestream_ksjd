@@ -9,4 +9,9 @@ urlpatterns = [
     path("innings/<int:pk>/scoring/", views.innings_scoring, name="innings_scoring"),
     path("live/<int:match_id>/", views.live_match, name="live_match"),
     path("api/matches/<int:match_id>/scoreboard/", views.scoreboard_api, name="scoreboard_api"),
+    path(
+    "api/innings/<int:innings_id>/bowler/<int:player_id>/momentum-proxy/",
+    views.bowler_momentum_proxy_api,
+    name="bowler_momentum_proxy_api",
+),
 ]

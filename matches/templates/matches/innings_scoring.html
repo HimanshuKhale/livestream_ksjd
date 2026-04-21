@@ -17,118 +17,307 @@
   </div>
 </section>
 
-<section class="grid gap-6 xl:grid-cols-[1.1fr_1.5fr_1fr]">
-  <aside class="rounded-3xl border border-slate-800 bg-slate-900 p-5">
-    <h2 class="mb-4 text-xl font-semibold">Current Summary</h2>
-
-    <div class="grid grid-cols-2 gap-3">
-      <div class="rounded-2xl bg-slate-950 p-4">
-        <p class="text-sm text-slate-400">Score</p>
-        <p class="text-3xl font-bold">{{ summary.total_runs }}/{{ summary.wickets }}</p>
-      </div>
-
-      <div class="rounded-2xl bg-slate-950 p-4">
-        <p class="text-sm text-slate-400">Overs</p>
-        <p class="text-3xl font-bold">{{ summary.overs }}</p>
-      </div>
-
-      <div class="rounded-2xl bg-slate-950 p-4">
-        <p class="text-sm text-slate-400">Run Rate</p>
-        <p class="text-3xl font-bold">{{ summary.run_rate }}</p>
-      </div>
-
-      <div class="rounded-2xl bg-slate-950 p-4">
-        <p class="text-sm text-slate-400">Balls</p>
-        <p class="text-3xl font-bold">{{ summary.legal_balls }}</p>
-      </div>
+<section class="mb-6 rounded-3xl border border-slate-800 bg-slate-900 p-4">
+  <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
+    <div class="rounded-2xl bg-slate-950 p-4">
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Score</p>
+      <p class="mt-2 text-3xl font-bold text-white">{{ summary.total_runs }}</p>
     </div>
-
-    <div class="mt-5">
-      <h3 class="mb-2 font-semibold">Recent Balls</h3>
-      <div class="flex flex-wrap gap-2">
-        {% for ball in summary.recent_balls %}
-          <span class="rounded-full border border-slate-700 bg-slate-950 px-3 py-2 text-sm">
-            {{ ball.over_ball }} · {{ ball.label }}
-          </span>
-        {% empty %}
-          <span class="text-sm text-slate-400">No balls entered yet.</span>
-        {% endfor %}
-      </div>
+    <div class="rounded-2xl bg-slate-950 p-4">
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Wickets</p>
+      <p class="mt-2 text-3xl font-bold text-white">{{ summary.wickets }}</p>
     </div>
-  </aside>
+    <div class="rounded-2xl bg-slate-950 p-4">
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Overs</p>
+      <p class="mt-2 text-3xl font-bold text-white">{{ summary.overs }}</p>
+    </div>
+    <div class="rounded-2xl bg-slate-950 p-4">
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Run Rate</p>
+      <p class="mt-2 text-3xl font-bold text-white">{{ summary.run_rate }}</p>
+    </div>
+    <div class="rounded-2xl bg-slate-950 p-4">
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Striker</p>
+      <p class="mt-2 text-lg font-semibold text-white">{{ next_ball_context.striker_name|default:"Choose batter" }}</p>
+    </div>
+    <div class="rounded-2xl bg-slate-950 p-4">
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Non-Striker</p>
+      <p class="mt-2 text-lg font-semibold text-white">{{ next_ball_context.non_striker_name|default:"Choose batter" }}</p>
+    </div>
+    <div class="rounded-2xl bg-slate-950 p-4">
+      <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Current Bowler</p>
+      <p class="mt-2 text-lg font-semibold text-white">{{ next_ball_context.bowler_name|default:"Choose bowler" }}</p>
+    </div>
+  </div>
+</section>
 
+<section class="grid gap-6 xl:grid-cols-[1.6fr_0.9fr]">
   <section class="rounded-3xl border border-slate-800 bg-slate-900 p-5">
-    <h2 class="mb-4 text-xl font-semibold">Enter Ball Event</h2>
-
-    <div class="mb-5 rounded-2xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-300">
-      <div class="mb-2 flex flex-wrap items-center gap-2">
-        <span class="font-semibold text-white">Next ball default:</span>
-        <span>{{ next_ball_context.over_number }}.{{ next_ball_context.ball_number }}</span>
+    <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="text-xl font-semibold">Ball Workflow</h2>
+        <p class="text-sm text-slate-400">Score the next ball using grouped controls, with admin override still available.</p>
+      </div>
+      <div class="rounded-2xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm text-slate-300">
+        <span class="font-semibold text-white">Next ball:</span>
+        <span class="ml-2">{{ next_ball_context.over_number }}.{{ next_ball_context.ball_number }}</span>
         {% if next_ball_context.requires_new_bowler %}
-          <span class="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs text-amber-300">Select new bowler</span>
+          <span class="ml-2 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs text-amber-300">New over, select bowler</span>
         {% endif %}
       </div>
-      <div class="flex flex-col gap-1">
-        <span>Striker: {{ next_ball_context.striker_name|default:"Choose batter" }}</span>
-        <span>Non-striker: {{ next_ball_context.non_striker_name|default:"Choose batter" }}</span>
-        <span>Bowler: {{ next_ball_context.bowler_name|default:"Choose bowler" }}</span>
-      </div>
-      {% if suggested_batters %}
-        <div class="mt-3">
-          <span class="font-semibold text-white">Next batter suggestions:</span>
-          {% for player in suggested_batters %}
-            <span class="mt-2 inline-flex rounded-full border border-slate-700 px-3 py-1 text-xs">{{ player.name }}</span>
-          {% endfor %}
-        </div>
-      {% endif %}
     </div>
 
-    <form method="post" class="grid gap-4 md:grid-cols-2">
+    <form method="post" class="space-y-5">
       {% csrf_token %}
 
-      {% for field in form %}
-        <div class="{% if field.name == 'notes' %}md:col-span-2{% endif %}">
-          <label class="mb-1 block text-sm font-medium text-slate-300">{{ field.label }}</label>
-          {{ field }}
-
-          {% if field.help_text %}
-            <p class="mt-1 text-xs text-slate-500">{{ field.help_text }}</p>
-          {% endif %}
-
-          {% for error in field.errors %}
-            <p class="mt-1 text-xs text-rose-400">{{ error }}</p>
-          {% endfor %}
+      <section class="rounded-3xl border border-slate-800 bg-slate-950 p-5">
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h3 class="text-lg font-semibold text-white">Delivery / Runs / Extras</h3>
+            <p class="text-sm text-slate-400">Core ball state, batters, bowler, over, and scoring outcome.</p>
+          </div>
+          <span class="rounded-full border border-slate-700 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-400">Workflow 1</span>
         </div>
-      {% endfor %}
 
-      <div class="md:col-span-2">
-        <button class="rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-slate-950">
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div>
+            <label class="mb-1 block text-sm font-medium text-slate-300">{{ form.over_number.label }}</label>
+            {{ form.over_number }}
+            {% for error in form.over_number.errors %}<p class="mt-1 text-xs text-rose-400">{{ error }}</p>{% endfor %}
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium text-slate-300">{{ form.ball_number.label }}</label>
+            {{ form.ball_number }}
+            {% if form.ball_number.help_text %}<p class="mt-1 text-xs text-slate-500">{{ form.ball_number.help_text }}</p>{% endif %}
+            {% for error in form.ball_number.errors %}<p class="mt-1 text-xs text-rose-400">{{ error }}</p>{% endfor %}
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium text-slate-300">{{ form.is_legal_delivery.label }}</label>
+            <div class="rounded-xl border border-slate-800 bg-slate-900 px-3 py-2">{{ form.is_legal_delivery }}</div>
+            {% for error in form.is_legal_delivery.errors %}<p class="mt-1 text-xs text-rose-400">{{ error }}</p>{% endfor %}
+          </div>
+
+          <div>
+            <label class="mb-1 block text-sm font-medium text-slate-300">{{ form.striker.label }}</label>
+            {{ form.striker }}
+            {% for error in form.striker.errors %}<p class="mt-1 text-xs text-rose-400">{{ error }}</p>{% endfor %}
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium text-slate-300">{{ form.non_striker.label }}</label>
+            {{ form.non_striker }}
+            {% for error in form.non_striker.errors %}<p class="mt-1 text-xs text-rose-400">{{ error }}</p>{% endfor %}
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium text-slate-300">{{ form.bowler.label }}</label>
+            {{ form.bowler }}
+            {% for error in form.bowler.errors %}<p class="mt-1 text-xs text-rose-400">{{ error }}</p>{% endfor %}
+          </div>
+
+          <div>
+            <label class="mb-1 block text-sm font-medium text-slate-300">{{ form.runs_off_bat.label }}</label>
+            {{ form.runs_off_bat }}
+            {% for error in form.runs_off_bat.errors %}<p class="mt-1 text-xs text-rose-400">{{ error }}</p>{% endfor %}
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium text-slate-300">{{ form.extra_type.label }}</label>
+            {{ form.extra_type }}
+            {% for error in form.extra_type.errors %}<p class="mt-1 text-xs text-rose-400">{{ error }}</p>{% endfor %}
+          </div>
+          <div id="extras-fields">
+            <label class="mb-1 block text-sm font-medium text-slate-300">{{ form.extras.label }}</label>
+            {{ form.extras }}
+            {% for error in form.extras.errors %}<p class="mt-1 text-xs text-rose-400">{{ error }}</p>{% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-3xl border border-slate-800 bg-slate-950 p-5">
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h3 class="text-lg font-semibold text-white">Wicket Workflow</h3>
+            <p class="text-sm text-slate-400">Open wicket details only when a dismissal happens. Suggested next batters stay visible.</p>
+          </div>
+          <span class="rounded-full border border-slate-700 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-400">Workflow 2</span>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2">
+          <div>
+            <label class="mb-1 block text-sm font-medium text-slate-300">{{ form.wicket_fell.label }}</label>
+            <div class="rounded-xl border border-slate-800 bg-slate-900 px-3 py-2">{{ form.wicket_fell }}</div>
+            {% for error in form.wicket_fell.errors %}<p class="mt-1 text-xs text-rose-400">{{ error }}</p>{% endfor %}
+          </div>
+          <div class="rounded-2xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-300">
+            <p class="font-semibold text-white">Next batter suggestions</p>
+            {% if suggested_batters %}
+              <div class="mt-3 flex flex-wrap gap-2">
+                {% for player in suggested_batters %}
+                  <span class="rounded-full border border-slate-700 px-3 py-1 text-xs">{{ player.name }}</span>
+                {% endfor %}
+              </div>
+            {% else %}
+              <p class="mt-2 text-slate-400">Suggestions will appear once the batting state narrows the next slot.</p>
+            {% endif %}
+          </div>
+        </div>
+
+        <div id="wicket-fields" class="mt-4 grid gap-4 md:grid-cols-3">
+          <div>
+            <label class="mb-1 block text-sm font-medium text-slate-300">{{ form.wicket_type.label }}</label>
+            {{ form.wicket_type }}
+            {% for error in form.wicket_type.errors %}<p class="mt-1 text-xs text-rose-400">{{ error }}</p>{% endfor %}
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium text-slate-300">{{ form.dismissed_player.label }}</label>
+            {{ form.dismissed_player }}
+            {% for error in form.dismissed_player.errors %}<p class="mt-1 text-xs text-rose-400">{{ error }}</p>{% endfor %}
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium text-slate-300">{{ form.fielder_name.label }}</label>
+            {{ form.fielder_name }}
+            {% for error in form.fielder_name.errors %}<p class="mt-1 text-xs text-rose-400">{{ error }}</p>{% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-3xl border border-slate-800 bg-slate-950 p-5">
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h3 class="text-lg font-semibold text-white">Shot + Location Workflow</h3>
+            <p class="text-sm text-slate-400">Keep the current form fields, but lay them out so visual selectors can replace them later.</p>
+          </div>
+          <span class="rounded-full border border-slate-700 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-400">Workflow 3</span>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2">
+          <div>
+            <label class="mb-1 block text-sm font-medium text-slate-300">{{ form.shot_type.label }}</label>
+            {{ form.shot_type }}
+            {% for error in form.shot_type.errors %}<p class="mt-1 text-xs text-rose-400">{{ error }}</p>{% endfor %}
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium text-slate-300">{{ form.shot_zone.label }}</label>
+            {{ form.shot_zone }}
+            {% for error in form.shot_zone.errors %}<p class="mt-1 text-xs text-rose-400">{{ error }}</p>{% endfor %}
+          </div>
+          <div class="md:col-span-2">
+            <label class="mb-1 block text-sm font-medium text-slate-300">{{ form.notes.label }}</label>
+            {{ form.notes }}
+            {% for error in form.notes.errors %}<p class="mt-1 text-xs text-rose-400">{{ error }}</p>{% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <div class="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-slate-800 bg-slate-950 p-4">
+        <div class="text-sm text-slate-400">
+          Smart defaults come from the previous ball, but every field remains editable for scorer and admin override.
+        </div>
+        <button class="rounded-xl bg-emerald-500 px-5 py-3 font-semibold text-slate-950">
           Save Ball Event
         </button>
       </div>
     </form>
   </section>
 
-  <aside class="rounded-3xl border border-slate-800 bg-slate-900 p-5">
-    <h2 class="mb-4 text-xl font-semibold">Last 12 Entries</h2>
-
-    <div class="space-y-3">
-      {% for e in events %}
-        <div class="rounded-2xl bg-slate-950 p-4 text-sm">
-          <div class="mb-1 font-semibold">{{ e.over_number }}.{{ e.ball_number }} · {{ e.striker.name }} vs {{ e.bowler.name }}</div>
-          <div class="text-slate-300">
-            Runs: {{ e.total_runs }}
-            {% if e.extra_type %} · {{ e.get_extra_type_display }}{% endif %}
-            {% if e.wicket_fell %} · Wicket{% endif %}
+  <aside class="space-y-6">
+    <section class="rounded-3xl border border-slate-800 bg-slate-900 p-5">
+      <h2 class="mb-4 text-xl font-semibold">Previous Ball</h2>
+      {% if previous_ball %}
+        <div class="rounded-3xl border border-slate-800 bg-slate-950 p-5">
+          <div class="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Last recorded event</p>
+              <p class="mt-1 text-2xl font-bold text-white">{{ previous_ball.over_number }}.{{ previous_ball.ball_number }}</p>
+            </div>
+            <div class="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-300">
+              {{ previous_ball.total_runs }} run{{ previous_ball.total_runs|pluralize }}
+            </div>
           </div>
-          <div class="text-slate-500">{{ e.shot_type|default:"-" }} · {{ e.shot_zone|default:"-" }}</div>
+
+          <div class="space-y-3 text-sm text-slate-300">
+            <div>
+              <p class="text-slate-500">Matchup</p>
+              <p class="font-semibold text-white">{{ previous_ball.striker.name }} vs {{ previous_ball.bowler.name }}</p>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+              <div>
+                <p class="text-slate-500">Batters</p>
+                <p>{{ previous_ball.striker.name }} / {{ previous_ball.non_striker.name }}</p>
+              </div>
+              <div>
+                <p class="text-slate-500">Outcome</p>
+                <p>
+                  {{ previous_ball.runs_off_bat }} off bat
+                  {% if previous_ball.extra_type %} · {{ previous_ball.get_extra_type_display }} {{ previous_ball.extras }}{% endif %}
+                  {% if previous_ball.wicket_fell %} · Wicket{% endif %}
+                </p>
+              </div>
+              <div>
+                <p class="text-slate-500">Shot</p>
+                <p>{{ previous_ball.get_shot_type_display|default:"Unknown" }} · {{ previous_ball.shot_zone|default:"-" }}</p>
+              </div>
+              <div>
+                <p class="text-slate-500">Notes</p>
+                <p>{{ previous_ball.notes|default:"No notes recorded." }}</p>
+              </div>
+            </div>
+          </div>
         </div>
-      {% empty %}
-        <div class="rounded-2xl bg-slate-950 p-4 text-sm text-slate-400">
-          No entries yet.
+      {% else %}
+        <div class="rounded-3xl border border-slate-800 bg-slate-950 p-5 text-sm text-slate-400">
+          No prior event yet. The console is preloaded for the first ball of the innings.
         </div>
-      {% endfor %}
-    </div>
+      {% endif %}
+    </section>
+
+    <section class="rounded-3xl border border-slate-800 bg-slate-900 p-5">
+      <h2 class="mb-3 text-xl font-semibold">Next Ball State</h2>
+      <div class="space-y-3 text-sm text-slate-300">
+        <div class="rounded-2xl bg-slate-950 p-4">
+          <p class="text-slate-500">Derived slot</p>
+          <p class="mt-1 text-lg font-semibold text-white">{{ next_ball_context.over_number }}.{{ next_ball_context.ball_number }}</p>
+        </div>
+        <div class="rounded-2xl bg-slate-950 p-4">
+          <p class="text-slate-500">Batters</p>
+          <p class="mt-1">{{ next_ball_context.striker_name|default:"Choose striker" }} / {{ next_ball_context.non_striker_name|default:"Choose non-striker" }}</p>
+        </div>
+        <div class="rounded-2xl bg-slate-950 p-4">
+          <p class="text-slate-500">Bowler</p>
+          <p class="mt-1">{{ next_ball_context.bowler_name|default:"Choose bowler" }}</p>
+          {% if next_ball_context.requires_new_bowler %}
+            <p class="mt-2 text-xs text-amber-300">Bowler clears because a new over is starting.</p>
+          {% endif %}
+        </div>
+      </div>
+    </section>
   </aside>
 </section>
+
+<script>
+  (() => {
+    const extraTypeField = document.getElementById("id_extra_type");
+    const extrasFields = document.getElementById("extras-fields");
+    const wicketToggle = document.getElementById("id_wicket_fell");
+    const wicketFields = document.getElementById("wicket-fields");
+
+    const syncWorkflowSections = () => {
+      if (extraTypeField && extrasFields) {
+        const showExtras = extraTypeField.value !== "";
+        extrasFields.style.display = showExtras ? "" : "none";
+      }
+
+      if (wicketToggle && wicketFields) {
+        wicketFields.style.display = wicketToggle.checked ? "grid" : "none";
+      }
+    };
+
+    if (extraTypeField) {
+      extraTypeField.addEventListener("change", syncWorkflowSections);
+    }
+
+    if (wicketToggle) {
+      wicketToggle.addEventListener("change", syncWorkflowSections);
+    }
+
+    syncWorkflowSections();
+  })();
+</script>
 {% endblock %}

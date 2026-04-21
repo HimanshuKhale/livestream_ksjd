@@ -116,3 +116,5 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "static/"
+BOWLER_MOMENTUM_API_URL = "https://bowler-momentum-api-3.onrender.com/api/bowler-momentum/"
+BOWLER_MOMENTUM_API_TIMEOUT = 70
