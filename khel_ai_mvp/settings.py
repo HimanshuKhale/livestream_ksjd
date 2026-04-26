@@ -124,4 +124,6 @@ STUDENT3_API_BASE_URL = "https://khel-ai-st3-sp1.onrender.com"
 STUDENT4_API_BASE_URL = "https://khel-ai-st4-sp1.onrender.com"
 STUDENT5_API_BASE_URL = "https://khel-ai-st5-sp1.onrender.com"
 EXTERNAL_ANALYTICS_API_TIMEOUT = 90
-LIVE_ANALYTICS_API_TIMEOUT = 12
+LIVE_ANALYTICS_API_TIMEOUT = 90
+STUDENT1_SPRINT2_API_BASE_URL = "https://khel-ai-st1-sp2.onrender.com"
+EXTERNAL_ANALYTICS_API_TIMEOUT = 90

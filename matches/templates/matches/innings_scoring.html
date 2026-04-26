@@ -726,6 +726,102 @@
     </section>
   </aside>
 </section>
+<section class="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+  <h2 class="text-xl font-bold text-slate-900">Student 1 Sprint 2 Infographic Dashboard</h2>
+  <p class="mt-1 text-sm text-slate-600">
+    Select the analytics card and player to show on the public live match screen.
+  </p>
+
+  <form method="post" action="{% url 'trigger_student1_sprint2_card' innings.id %}" class="mt-5 grid gap-4 md:grid-cols-4">
+    {% csrf_token %}
+
+    <div>
+      <label class="block text-sm font-semibold text-slate-700">Infographic</label>
+      <select name="metric_type" class="mt-1 w-full rounded-xl border border-slate-300 p-2 text-slate-900">
+        <option value="batting_dashboard">Full Batting Dashboard</option>
+        <option value="consistency_index">Batting Consistency Index</option>
+        <option value="pressure_performance">Pressure Performance Index</option>
+        <option value="shot_risk_efficiency">Shot Risk Efficiency</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-semibold text-slate-700">Player</label>
+      <select name="player_id" class="mt-1 w-full rounded-xl border border-slate-300 p-2 text-slate-900">
+        {% for player in innings.batting_team.players.all %}
+          <option value="{{ player.id }}">{{ player.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-semibold text-slate-700">Display Area</label>
+      <select name="display_area" class="mt-1 w-full rounded-xl border border-slate-300 p-2 text-slate-900">
+        <option value="between_balls">Between Balls</option>
+        <option value="between_overs">Between Overs</option>
+        <option value="main_overlay">Main Overlay</option>
+        <option value="bottom_bar">Bottom Bar</option>
+      </select>
+    </div>
+
+    <div class="flex items-end">
+      <button class="w-full rounded-xl bg-slate-900 px-4 py-2 font-semibold text-white">
+        Show on Live Match
+      </button>
+    </div>
+  </form>
+</section>
+<section class="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+  <h2 class="text-xl font-bold text-slate-900">Live Infographic Banner Manager</h2>
+
+  <div class="mt-4 space-y-3">
+    {% for card in innings.live_infographic_cards.all %}
+      <div class="flex items-center justify-between rounded-xl border border-slate-200 p-4">
+        <div>
+          <div class="font-bold text-slate-900">
+            {{ card.player.name }} — {{ card.get_metric_type_display }}
+          </div>
+          <div class="text-sm text-slate-500">
+            {{ card.display_area }} ·
+            {% if card.is_visible %}
+              Visible
+            {% else %}
+              Hidden
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="flex gap-2">
+          {% if card.is_visible %}
+            <form method="post" action="{% url 'hide_infographic_card' card.id %}">
+              {% csrf_token %}
+              <button class="rounded-lg bg-yellow-500 px-3 py-2 text-sm font-bold text-white">
+                Hide
+              </button>
+            </form>
+          {% else %}
+            <form method="post" action="{% url 'show_infographic_card' card.id %}">
+              {% csrf_token %}
+              <button class="rounded-lg bg-green-600 px-3 py-2 text-sm font-bold text-white">
+                Show
+              </button>
+            </form>
+          {% endif %}
+
+          <form method="post" action="{% url 'remove_infographic_card' card.id %}">
+            {% csrf_token %}
+            <button class="rounded-lg bg-red-600 px-3 py-2 text-sm font-bold text-white">
+              Remove
+            </button>
+          </form>
+        </div>
+      </div>
+    {% empty %}
+      <p class="text-sm text-slate-500">No infographic banners created yet.</p>
+    {% endfor %}
+  </div>
+</section>
+
 
 <script>
   (() => {

@@ -1,11 +1,12 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
 import requests
 from django.conf import settings
 from django.contrib import messages
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-
+from django.views.decorators.http import require_POST
+from .models import LiveInfographicCard
+from .sprint2_payloads import build_student1_sprint2_payload
 from . import api_clients
 from .analytics_payloads import (
     build_batting_form_payload,
@@ -124,7 +125,8 @@ def live_match(request, match_id):
         pk=match_id
     )
     innings = match.innings.select_related("batting_team", "bowling_team").order_by("-innings_number").first()
-
+    
+    active_infographic = None
     live_batting = None
     bowling_players = []
     analytics_cards = []
@@ -150,6 +152,13 @@ def live_match(request, match_id):
             batting_player_id=scoring_state.striker_id,
             bowling_player_id=scoring_state.bowler_id,
         )
+        active_infographic = (
+            innings.live_infographic_cards
+            .filter(is_active=True)
+            .select_related("player")
+            .order_by("-created_at")
+            .first()
+        )
 
     return render(
         request,
@@ -162,9 +171,9 @@ def live_match(request, match_id):
             "analytics_cards": analytics_cards,
             "bottom_bar_analytics": bottom_bar_analytics,
             "last_ball_metadata": last_ball_metadata,
+            "active_infographic": active_infographic,
         },
     )
-
 
 def live_analytics_api(request, match_id):
     match = get_object_or_404(Match, pk=match_id)
@@ -184,17 +193,44 @@ def live_analytics_api(request, match_id):
             "total_ball_events": 0,
             "analytics_cards": [],
             "bottom_bar_analytics": [],
+            "active_infographic": None,
+            "active_infographics": [],
             "message": "No innings available yet.",
         })
 
     scoring_state = get_scoring_state(innings)
+
     analytics_cards, bottom_bar_analytics = _build_live_analytics(
         innings,
         batting_player_id=scoring_state.striker_id,
         bowling_player_id=scoring_state.bowler_id,
         timeout=getattr(settings, "LIVE_ANALYTICS_API_TIMEOUT", 12),
     )
+
     metadata = get_last_ball_metadata(innings)
+
+    active_infographics_qs = (
+        innings.live_infographic_cards
+        .filter(is_active=True, is_visible=True)
+        .select_related("player")
+        .order_by("-created_at")[:5]
+    )
+
+    active_infographics = list(active_infographics_qs)
+    active_infographic = active_infographics[0] if active_infographics else None
+
+    active_infographics_payload = [
+        {
+            "id": card.id,
+            "player_name": card.player.name,
+            "metric_type": card.metric_type,
+            "metric_label": card.get_metric_type_display(),
+            "display_area": card.display_area,
+            "card_data": card.card_data,
+            "created_at": card.created_at.isoformat() if card.created_at else None,
+        }
+        for card in active_infographics
+    ]
 
     return JsonResponse({
         "ok": True,
@@ -205,6 +241,12 @@ def live_analytics_api(request, match_id):
         "total_ball_events": metadata["total_ball_events"],
         "analytics_cards": analytics_cards,
         "bottom_bar_analytics": bottom_bar_analytics,
+
+        # Backward compatibility: latest visible banner
+        "active_infographic": active_infographics_payload[0] if active_infographics_payload else None,
+
+        # New: multiple visible banners
+        "active_infographics": active_infographics_payload,
     })
 
 
@@ -611,3 +653,72 @@ def get_current_batting_display(innings):
         "striker": last_ball.striker,
         "non_striker": last_ball.non_striker,
     }
+
+@require_POST
+def trigger_student1_sprint2_card(request, innings_id):
+    innings = get_object_or_404(Innings, pk=innings_id)
+    player = get_object_or_404(Player, pk=request.POST.get("player_id"))
+
+    metric_type = request.POST.get("metric_type", "batting_dashboard")
+    display_area = request.POST.get("display_area", "between_balls")
+
+    payload = build_student1_sprint2_payload(innings, player)
+
+    endpoint_map = {
+        "batting_dashboard": api_clients.call_student1_batting_dashboard,
+        "consistency_index": api_clients.call_student1_consistency_index,
+        "pressure_performance": api_clients.call_student1_pressure_performance,
+        "shot_risk_efficiency": api_clients.call_student1_shot_risk_efficiency,
+    }
+
+    result = endpoint_map[metric_type](payload)
+
+    card_data = result.get("data", {}) if result.get("ok") else {
+        "error": result.get("error"),
+        "detail": result.get("detail"),
+    }
+
+
+
+    LiveInfographicCard.objects.create(
+        innings=innings,
+        player=player,
+        metric_type=metric_type,
+        display_area=display_area,
+        payload_sent=payload,
+        api_response=result,
+        card_data=card_data,
+        is_active=True,
+        is_visible=True,
+    )
+
+    messages.success(request, "Live infographic card triggered.")
+    return redirect("innings_scoring", pk=innings.pk)
+
+@require_POST
+def hide_infographic_card(request, card_id):
+    card = get_object_or_404(LiveInfographicCard, pk=card_id)
+    card.is_visible = False
+    card.save(update_fields=["is_visible"])
+    messages.success(request, "Infographic hidden from live match.")
+    return redirect("innings_scoring", pk=card.innings_id)
+
+
+@require_POST
+def show_infographic_card(request, card_id):
+    card = get_object_or_404(LiveInfographicCard, pk=card_id)
+    card.is_visible = True
+    card.is_active = True
+    card.save(update_fields=["is_visible", "is_active"])
+    messages.success(request, "Infographic shown on live match.")
+    return redirect("innings_scoring", pk=card.innings_id)
+
+
+@require_POST
+def remove_infographic_card(request, card_id):
+    card = get_object_or_404(LiveInfographicCard, pk=card_id)
+    card.is_active = False
+    card.is_visible = False
+    card.save(update_fields=["is_active", "is_visible"])
+    messages.success(request, "Infographic removed from live match.")
+    return redirect("innings_scoring", pk=card.innings_id)

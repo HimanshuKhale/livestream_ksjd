@@ -191,3 +191,40 @@ class BallEvent(models.Model):
     @property
     def total_runs(self):
         return self.runs_off_bat + self.extras
+
+
+class LiveInfographicCard(models.Model):
+    METRIC_CHOICES = [
+        ("batting_dashboard", "Batting Dashboard"),
+        ("consistency_index", "Batting Consistency Index"),
+        ("pressure_performance", "Pressure Performance Index"),
+        ("shot_risk_efficiency", "Shot Risk Efficiency"),
+    ]
+
+    DISPLAY_CHOICES = [
+        ("between_balls", "Between Balls"),
+        ("between_overs", "Between Overs"),
+        ("main_overlay", "Main Overlay"),
+        ("bottom_bar", "Bottom Bar"),
+    ]
+
+    innings = models.ForeignKey(
+        Innings,
+        on_delete=models.CASCADE,
+        related_name="live_infographic_cards"
+    )
+    player = models.ForeignKey(
+        Player,
+        on_delete=models.CASCADE,
+        related_name="live_infographic_cards"
+    )
+    metric_type = models.CharField(max_length=50, choices=METRIC_CHOICES)
+    display_area = models.CharField(max_length=30, choices=DISPLAY_CHOICES, default="between_balls")
+
+    payload_sent = models.JSONField(default=dict, blank=True)
+    api_response = models.JSONField(default=dict, blank=True)
+    card_data = models.JSONField(default=dict, blank=True)
+
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_visible = models.BooleanField(default=True)

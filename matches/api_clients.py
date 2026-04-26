@@ -107,3 +107,45 @@ def call_student5_required_run_rate(payload, timeout=None):
 
 def call_student5_win_probability_label(payload, timeout=None):
     return call_external_analytics_api(settings.STUDENT5_API_BASE_URL, "/student5/win-probability-label", payload, "Student 5", timeout=timeout)
+
+
+def call_student1_sprint2_api(endpoint, payload, timeout=None):
+    return call_external_analytics_api(
+        settings.STUDENT1_SPRINT2_API_BASE_URL,
+        endpoint,
+        payload,
+        "Student 1 Sprint 2",
+        timeout=timeout,
+    )
+
+
+def call_student1_batting_dashboard(payload, timeout=None):
+    return call_student1_sprint2_api(
+        "/api/v1/cards/batting-dashboard",
+        payload,
+        timeout=timeout,
+    )
+
+
+def call_student1_consistency_index(payload, timeout=None):
+    return call_student1_sprint2_api(
+        "/api/v1/batting/consistency-index",
+        payload,
+        timeout=timeout,
+    )
+
+
+def call_student1_pressure_performance(payload, timeout=None):
+    return call_student1_sprint2_api(
+        "/api/v1/batting/pressure-performance",
+        payload,
+        timeout=timeout,
+    )
+
+
+def call_student1_shot_risk_efficiency(payload, timeout=None):
+    return call_student1_sprint2_api(
+        "/api/v1/batting/shot-risk-efficiency",
+        payload,
+        timeout=timeout,
+    )

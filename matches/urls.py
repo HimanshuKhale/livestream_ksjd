@@ -14,5 +14,26 @@ urlpatterns = [
     "api/innings/<int:innings_id>/bowler/<int:player_id>/momentum-proxy/",
     views.bowler_momentum_proxy_api,
     name="bowler_momentum_proxy_api",
-),
+    ),
+
+    path(
+    "innings/<int:innings_id>/trigger-student1-card/",
+    views.trigger_student1_sprint2_card,
+    name="trigger_student1_sprint2_card",
+    ),
+    path(
+    "infographic/<int:card_id>/hide/",
+    views.hide_infographic_card,
+    name="hide_infographic_card",
+    ),
+    path(
+        "infographic/<int:card_id>/show/",
+        views.show_infographic_card,
+        name="show_infographic_card",
+    ),
+    path(
+        "infographic/<int:card_id>/remove/",
+        views.remove_infographic_card,
+        name="remove_infographic_card",
+    ),
 ]

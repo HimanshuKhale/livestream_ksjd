@@ -72,6 +72,64 @@
     {% endif %}
   </div>
 
+{% if active_infographic %}
+<section
+  id="live-infographic-card"
+  class="fixed bottom-8 left-1/2 z-50 w-[92%] max-w-3xl -translate-x-1/2 rounded-3xl border border-white/20 bg-slate-950/95 p-6 text-white shadow-2xl backdrop-blur"
+>
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <p class="text-xs uppercase tracking-[0.3em] text-cyan-300">
+        Khel AI Insight
+      </p>
+      <h2 class="mt-2 text-2xl font-black">
+        {{ active_infographic.player.name }}
+      </h2>
+      <p class="text-sm text-slate-300">
+        {{ active_infographic.get_metric_type_display }}
+      </p>
+    </div>
+
+    <div class="rounded-2xl bg-white px-5 py-3 text-right text-slate-950">
+      {% if active_infographic.card_data.score %}
+        <div class="text-3xl font-black">
+          {{ active_infographic.card_data.score }}
+        </div>
+        <div class="text-xs font-bold uppercase">
+          Score
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if active_infographic.card_data.card %}
+    <div class="mt-5 rounded-2xl bg-white/10 p-4">
+      <h3 class="text-xl font-bold">
+        {{ active_infographic.card_data.card.title }}
+      </h3>
+      <p class="mt-2 text-slate-200">
+        {{ active_infographic.card_data.card.insight }}
+      </p>
+      <div class="mt-3 text-sm text-slate-300">
+        {{ active_infographic.card_data.grade }}
+      </div>
+    </div>
+  {% endif %}
+
+  {% if active_infographic.card_data.cards %}
+    <div class="mt-5 grid gap-3 md:grid-cols-3">
+      {% for card in active_infographic.card_data.cards %}
+        <div class="rounded-2xl bg-white/10 p-4">
+          <div class="text-sm text-slate-300">{{ card.label }}</div>
+          <div class="text-3xl font-black">{{ card.value }}</div>
+          <div class="mt-2 text-sm">{{ card.insight }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+</section>
+{% endif %}
+
   <!-- Top-right analytics widget -->
   <div style="
     position: absolute;
