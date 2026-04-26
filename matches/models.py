@@ -98,14 +98,59 @@ class BallEvent(models.Model):
     SHOT_CHOICES = [
         ("", "Unknown"),
         ("defence", "Defence"),
+        ("leave", "Leave"),
         ("drive", "Drive"),
+        ("cover_drive", "Cover Drive"),
+        ("straight_drive", "Straight Drive"),
+        ("on_drive", "On Drive"),
+        ("lofted_drive", "Lofted Drive"),
         ("cut", "Cut"),
+        ("late_cut", "Late Cut"),
+        ("square_cut", "Square Cut"),
         ("pull", "Pull"),
+        ("hook", "Hook"),
         ("sweep", "Sweep"),
+        ("reverse_sweep", "Reverse Sweep"),
+        ("paddle_sweep", "Paddle Sweep"),
         ("glance", "Glance"),
-        ("lofted", "Lofted"),
+        ("flick", "Flick"),
+        ("clip", "Clip"),
+        ("lofted", "Lofted Shot"),
+        ("slog", "Slog"),
+        ("switch_hit", "Switch Hit"),
+        ("ramp", "Ramp"),
+        ("upper_cut", "Upper Cut"),
+        ("scoop", "Scoop"),
     ]
+    SHOT_ZONE_CHOICES = [
+        ("", "Unknown"),
 
+        # Outside 30-yard circle
+        ("long_off", "Long Off"),
+        ("deep_cover", "Deep Cover"),
+        ("third_point", "Third Point"),
+        ("fine_leg", "Fine Leg"),
+        ("long_on", "Long On"),
+        ("deep_square_leg", "Deep Square Leg"),
+        ("mid_on_area", "Mid On Area"),
+        ("deep_extra_cover", "Deep Extra Cover"),
+
+        # Inside 30-yard circle
+        ("straight_inside", "Straight (Inside)"),
+        ("mid_off", "Mid Off"),
+        ("cover_inside", "Cover (Inside)"),
+        ("point_inside", "Point (Inside)"),
+        ("fine_leg_inside", "Fine Leg (Inside)"),
+        ("square_leg_inside", "Square Leg (Inside)"),
+        ("mid_on_inside", "Mid On (Inside)"),
+        ("cover_point_inside", "Cover Point (Inside)"),
+
+        # Close-in fielders (advanced)
+        ("short_leg", "Short Leg"),
+        ("silly_point", "Silly Point"),
+        ("silly_mid_on", "Silly Mid On"),
+        ("silly_mid_wicket", "Silly Mid Wicket"),
+    ]
     innings = models.ForeignKey(Innings, on_delete=models.CASCADE, related_name="ball_events")
     over_number = models.PositiveSmallIntegerField()
     ball_number = models.PositiveSmallIntegerField(help_text="Use 1-6 for legal ball slot in the over.")
@@ -132,7 +177,7 @@ class BallEvent(models.Model):
     fielder_name = models.CharField(max_length=120, blank=True)
 
     shot_type = models.CharField(max_length=20, choices=SHOT_CHOICES, blank=True)
-    shot_zone = models.CharField(max_length=50, blank=True)
+    shot_zone = models.CharField(max_length=50, choices=SHOT_ZONE_CHOICES, blank=True)
     notes = models.CharField(max_length=255, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)

@@ -2,6 +2,33 @@
 {% block title %}Live: {{ match.title }}{% endblock %}
 
 {% block content %}
+<style>
+  .analytics-card-shell {
+    background: rgba(2, 6, 23, 0.42);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  .analytics-flash {
+    animation: analyticsPulse 1.2s ease;
+  }
+
+  @keyframes analyticsPulse {
+    0% {
+      border-color: rgba(52, 211, 153, 0.95);
+      box-shadow: 0 0 0 rgba(52, 211, 153, 0);
+    }
+    45% {
+      border-color: rgba(52, 211, 153, 1);
+      box-shadow: 0 0 22px rgba(52, 211, 153, 0.45);
+    }
+    100% {
+      border-color: rgba(255, 255, 255, 0.12);
+      box-shadow: 0 0 0 rgba(52, 211, 153, 0);
+    }
+  }
+</style>
 <div style="position: relative; width: 100%; height: 100vh; overflow: hidden;">
 
   <!-- Background live stream -->
@@ -57,7 +84,7 @@
     padding: 16px;
     border-radius: 10px;
   ">
-    <h2 style="margin-top: 0;">Live Analytics</h2>
+    <h2 style="margin-top: 0; margin-bottom: 12px;">Live Analytics</h2>
 
     <div id="analytics-widget">
 
@@ -88,8 +115,31 @@
         {% endif %}
       </div>
 
+      {% for card in analytics_cards %}
+        <div class="analytics-slide sprint-analytics-slide" style="display:none;">
+          <div class="analytics-card-shell">
+            <h3 style="margin: 0 0 4px 0;">{{ card.title }}</h3>
+            <p style="margin: 0 0 10px 0; color: #9fe7df; font-size: 12px;">{{ card.student }}</p>
+
+            {% if card.status == "error" %}
+              <p style="margin: 0; color: #fecaca;">{{ card.error }}</p>
+            {% else %}
+              {% if card.lines %}
+                <ul style="margin: 0; padding-left: 18px; line-height: 1.55;">
+                  {% for line in card.lines %}
+                    <li>{{ line }}</li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                <p style="margin: 0;">No compact analytics available</p>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+
       <!-- Slide 2: Bowler Momentum -->
-      <div class="analytics-slide" style="display:none;">
+      <div class="analytics-slide" id="manual-momentum-slide" style="display:none;">
         <h3 style="margin-top: 0;">Bowler Momentum</h3>
 
         {% if innings %}
@@ -140,18 +190,70 @@
     </div>
 
     <div style="margin-top: 16px; display: flex; gap: 12px;">
-      <button type="button" id="prev-slide-btn">Previous</button>
-      <button type="button" id="next-slide-btn">Next</button>
+      <button type="button" id="prev-slide-btn" style="background: #111827; color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 6px 10px; cursor: pointer;">Previous</button>
+      <button type="button" id="next-slide-btn" style="background: #2EB4A7; color: #07111f; border: none; border-radius: 6px; padding: 6px 10px; cursor: pointer;">Next</button>
+    </div>
+  </div>
+
+  <!-- Bottom analytics bar -->
+  <div id="bottom-analytics-bar" style="
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.78);
+    color: #f8fafc;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    overflow: hidden;
+  ">
+    <div id="bottom-analytics-content" style="
+      display: flex;
+      gap: 28px;
+      align-items: center;
+      min-height: 54px;
+      padding: 8px 18px;
+      overflow-x: auto;
+      white-space: nowrap;
+    ">
+      {% if bottom_bar_analytics %}
+        {% for card in bottom_bar_analytics %}
+          <div style="display: inline-flex; align-items: center; gap: 12px;">
+            <strong style="color: #9fe7df;">{{ card.title }}</strong>
+            {% if card.status == "error" %}
+              <span style="color: #fecaca;">Live analytics temporarily unavailable</span>
+            {% else %}
+              {% for line in card.lines %}
+                <span>{{ line }}</span>
+              {% empty %}
+                <span>Live analytics temporarily unavailable</span>
+              {% endfor %}
+            {% endif %}
+          </div>
+        {% endfor %}
+      {% else %}
+        <span>Live analytics temporarily unavailable</span>
+      {% endif %}
     </div>
   </div>
 </div>
 
 <script>
-  const slides = document.querySelectorAll(".analytics-slide");
+  let slides = [];
   let currentSlideIndex = 0;
   let selectedBowlerId = null;
+  let currentLastBallId = {{ last_ball_metadata.last_ball_id|default:"null" }};
+
+  function refreshSlides() {
+    slides = Array.from(document.querySelectorAll(".analytics-slide"));
+    if (currentSlideIndex >= slides.length) {
+      currentSlideIndex = 0;
+    }
+  }
 
   function showSlide(index) {
+    refreshSlides();
+    if (!slides.length) return;
     slides.forEach((slide, i) => {
       slide.style.display = i === index ? "block" : "none";
     });
@@ -162,6 +264,7 @@
 
   if (prevBtn) {
     prevBtn.addEventListener("click", function () {
+      refreshSlides();
       currentSlideIndex = (currentSlideIndex - 1 + slides.length) % slides.length;
       showSlide(currentSlideIndex);
     });
@@ -169,9 +272,150 @@
 
   if (nextBtn) {
     nextBtn.addEventListener("click", function () {
+      refreshSlides();
       currentSlideIndex = (currentSlideIndex + 1) % slides.length;
       showSlide(currentSlideIndex);
     });
+  }
+
+  function addFlash(element) {
+    if (!element) return;
+    element.classList.remove("analytics-flash");
+    void element.offsetWidth;
+    element.classList.add("analytics-flash");
+  }
+
+  function renderAnalyticsCard(card) {
+    const slide = document.createElement("div");
+    slide.className = "analytics-slide sprint-analytics-slide";
+    slide.style.display = "none";
+
+    const shell = document.createElement("div");
+    shell.className = "analytics-card-shell";
+
+    const title = document.createElement("h3");
+    title.style.margin = "0 0 4px 0";
+    title.textContent = card.title || "Analytics";
+    shell.appendChild(title);
+
+    const student = document.createElement("p");
+    student.style.margin = "0 0 10px 0";
+    student.style.color = "#9fe7df";
+    student.style.fontSize = "12px";
+    student.textContent = card.student || "";
+    shell.appendChild(student);
+
+    if (card.status === "error") {
+      const error = document.createElement("p");
+      error.style.margin = "0";
+      error.style.color = "#fecaca";
+      error.textContent = card.error || "Analytics temporarily unavailable";
+      shell.appendChild(error);
+    } else if (card.lines && card.lines.length) {
+      const list = document.createElement("ul");
+      list.style.margin = "0";
+      list.style.paddingLeft = "18px";
+      list.style.lineHeight = "1.55";
+      card.lines.forEach(function (line) {
+        const item = document.createElement("li");
+        item.textContent = line;
+        list.appendChild(item);
+      });
+      shell.appendChild(list);
+    } else {
+      const empty = document.createElement("p");
+      empty.style.margin = "0";
+      empty.textContent = "No compact analytics available";
+      shell.appendChild(empty);
+    }
+
+    slide.appendChild(shell);
+    return slide;
+  }
+
+  function renderSprintAnalyticsCards(cards) {
+    const widget = document.getElementById("analytics-widget");
+    const momentumSlide = document.getElementById("manual-momentum-slide");
+    if (!widget || !momentumSlide) return;
+
+    document.querySelectorAll(".sprint-analytics-slide").forEach(function (slide) {
+      slide.remove();
+    });
+
+    (cards || []).forEach(function (card) {
+      widget.insertBefore(renderAnalyticsCard(card), momentumSlide);
+    });
+
+    refreshSlides();
+    showSlide(currentSlideIndex);
+    document.querySelectorAll(".sprint-analytics-slide .analytics-card-shell").forEach(addFlash);
+  }
+
+  function renderBottomAnalytics(cards) {
+    const content = document.getElementById("bottom-analytics-content");
+    const bar = document.getElementById("bottom-analytics-bar");
+    if (!content) return;
+
+    content.innerHTML = "";
+
+    if (!cards || !cards.length) {
+      const fallback = document.createElement("span");
+      fallback.textContent = "Live analytics temporarily unavailable";
+      content.appendChild(fallback);
+      addFlash(bar);
+      return;
+    }
+
+    cards.forEach(function (card) {
+      const group = document.createElement("div");
+      group.style.display = "inline-flex";
+      group.style.alignItems = "center";
+      group.style.gap = "12px";
+
+      const title = document.createElement("strong");
+      title.style.color = "#9fe7df";
+      title.textContent = card.title || "Analytics";
+      group.appendChild(title);
+
+      if (card.status === "error") {
+        const error = document.createElement("span");
+        error.style.color = "#fecaca";
+        error.textContent = "Live analytics temporarily unavailable";
+        group.appendChild(error);
+      } else if (card.lines && card.lines.length) {
+        card.lines.forEach(function (line) {
+          const item = document.createElement("span");
+          item.textContent = line;
+          group.appendChild(item);
+        });
+      } else {
+        const empty = document.createElement("span");
+        empty.textContent = "Live analytics temporarily unavailable";
+        group.appendChild(empty);
+      }
+
+      content.appendChild(group);
+    });
+
+    addFlash(bar);
+  }
+
+  function pollLiveAnalytics() {
+    fetch("/api/live/{{ match.id }}/analytics/")
+      .then(function (response) {
+        return response.json();
+      })
+      .then(function (data) {
+        if (!data.ok) return;
+        if (data.last_ball_id === currentLastBallId) return;
+
+        currentLastBallId = data.last_ball_id;
+        renderSprintAnalyticsCards(data.analytics_cards || []);
+        renderBottomAnalytics(data.bottom_bar_analytics || []);
+      })
+      .catch(function (error) {
+        console.error(error);
+      });
   }
 
   function renderMomentum(data) {
@@ -244,6 +488,8 @@
     }
   }, 15000);
 
+  refreshSlides();
   showSlide(currentSlideIndex);
+  setInterval(pollLiveAnalytics, 5000);
 </script>
 {% endblock %}

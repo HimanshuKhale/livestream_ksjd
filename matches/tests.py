@@ -1,9 +1,15 @@
+from unittest.mock import patch
+
+import requests
 from django.test import TestCase
 from django.urls import reverse
 
+from .analytics_payloads import build_innings_payload, player_ref
+from .api_clients import ANALYTICS_UNAVAILABLE_MESSAGE, call_external_analytics_api
 from .forms import BallEventForm
 from .models import BallEvent, Innings, Match, Player, Team
 from .scoring import get_scoring_state
+from .views import _build_live_analytics
 
 
 class ScoringStateEngineTests(TestCase):
@@ -234,3 +240,212 @@ class ScoringStateEngineTests(TestCase):
         self.assertEqual(form.cleaned_data["striker"], self.a2)
         self.assertEqual(form.cleaned_data["non_striker"], self.a3)
         self.assertEqual(form.cleaned_data["bowler"], self.b2)
+
+
+class AnalyticsIntegrationTests(TestCase):
+    def setUp(self):
+        self.team_a = Team.objects.create(name="Alpha", short_name="ALP")
+        self.team_b = Team.objects.create(name="Bravo", short_name="BRV")
+        self.a1 = Player.objects.create(team=self.team_a, name="A One")
+        self.a2 = Player.objects.create(team=self.team_a, name="A Two")
+        self.b1 = Player.objects.create(team=self.team_b, name="B One")
+        self.b2 = Player.objects.create(team=self.team_b, name="B Two")
+        self.match = Match.objects.create(
+            title="Alpha vs Bravo",
+            venue="Main Ground",
+            team_1=self.team_a,
+            team_2=self.team_b,
+        )
+        self.innings = Innings.objects.create(
+            match=self.match,
+            innings_number=1,
+            batting_team=self.team_a,
+            bowling_team=self.team_b,
+            total_overs_limit=20,
+        )
+
+    def _ball(self, innings=None, **overrides):
+        payload = {
+            "innings": innings or self.innings,
+            "over_number": 1,
+            "ball_number": 1,
+            "striker": self.a1,
+            "non_striker": self.a2,
+            "bowler": self.b1,
+            "runs_off_bat": 4,
+            "extras": 0,
+            "extra_type": "",
+            "is_legal_delivery": True,
+            "wicket_fell": False,
+            "wicket_type": "",
+            "dismissed_player": None,
+            "fielder_name": "",
+            "shot_type": "",
+            "shot_zone": "",
+            "notes": "",
+        }
+        payload.update(overrides)
+        return BallEvent.objects.create(**payload)
+
+    def test_player_ref_handles_none(self):
+        self.assertIsNone(player_ref(None))
+        self.assertEqual(player_ref(self.a1), {"id": self.a1.id, "name": "A One"})
+
+    def test_build_innings_payload_returns_expected_shape(self):
+        self._ball(extras=1, extra_type="wide", is_legal_delivery=False)
+
+        payload = build_innings_payload(self.innings)
+
+        self.assertEqual(payload["match"]["id"], self.match.id)
+        self.assertEqual(payload["match"]["title"], "Alpha vs Bravo")
+        self.assertEqual(payload["match"]["venue"], "Main Ground")
+        self.assertEqual(payload["innings"]["batting_team"], "Alpha")
+        self.assertEqual(payload["innings"]["bowling_team"], "Bravo")
+        self.assertEqual(payload["innings"]["target"], None)
+        self.assertEqual(len(payload["balls"]), 1)
+        ball = payload["balls"][0]
+        self.assertEqual(ball["striker"], {"id": self.a1.id, "name": "A One"})
+        self.assertEqual(ball["non_striker"], {"id": self.a2.id, "name": "A Two"})
+        self.assertEqual(ball["bowler"], {"id": self.b1.id, "name": "B One"})
+        self.assertEqual(ball["runs_off_bat"], 4)
+        self.assertEqual(ball["extras"], 1)
+        self.assertEqual(ball["extra_type"], "wide")
+        self.assertFalse(ball["is_legal_delivery"])
+
+    def test_second_innings_target_uses_first_innings_total_plus_one(self):
+        self._ball(runs_off_bat=6)
+        self._ball(over_number=1, ball_number=2, runs_off_bat=2, extras=1)
+        second_innings = Innings.objects.create(
+            match=self.match,
+            innings_number=2,
+            batting_team=self.team_b,
+            bowling_team=self.team_a,
+            total_overs_limit=20,
+        )
+
+        payload = build_innings_payload(second_innings)
+
+        self.assertEqual(payload["match"]["target"], 10)
+        self.assertEqual(payload["innings"]["target"], 10)
+
+    @patch("matches.api_clients.requests.post")
+    def test_external_api_client_handles_timeout_without_raising(self, mock_post):
+        mock_post.side_effect = requests.exceptions.Timeout("service asleep")
+
+        result = call_external_analytics_api(
+            "https://example.test",
+            "/student/test",
+            {"hello": "world"},
+            "Student X",
+        )
+
+        self.assertFalse(result["ok"])
+        self.assertIsNone(result["data"])
+        self.assertEqual(result["error"], ANALYTICS_UNAVAILABLE_MESSAGE)
+        self.assertEqual(result["service"], "Student X")
+
+    @patch("matches.api_clients.requests.post")
+    def test_external_api_client_respects_custom_timeout(self, mock_post):
+        mock_post.side_effect = requests.exceptions.Timeout("service asleep")
+
+        call_external_analytics_api(
+            "https://example.test",
+            "/student/test",
+            {"hello": "world"},
+            "Student X",
+            timeout=3,
+        )
+
+        self.assertEqual(mock_post.call_args.kwargs["timeout"], 3)
+
+    @patch("matches.api_clients.requests.post")
+    def test_live_match_loads_when_external_analytics_fail(self, mock_post):
+        self._ball()
+        mock_post.side_effect = requests.exceptions.RequestException("down")
+
+        response = self.client.get(reverse("live_match", args=[self.match.pk]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("analytics_cards", response.context)
+        self.assertIn("bottom_bar_analytics", response.context)
+        self.assertTrue(response.context["analytics_cards"])
+        self.assertTrue(response.context["bottom_bar_analytics"])
+        self.assertContains(response, ANALYTICS_UNAVAILABLE_MESSAGE)
+
+    @patch("matches.api_clients.requests.post")
+    def test_live_analytics_endpoint_returns_200(self, mock_post):
+        self._ball()
+        mock_post.side_effect = requests.exceptions.RequestException("down")
+
+        response = self.client.get(reverse("live_analytics_api", args=[self.match.pk]))
+        data = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(data["ok"])
+        self.assertEqual(data["match_id"], self.match.id)
+        self.assertEqual(data["innings_id"], self.innings.id)
+        self.assertTrue(data["analytics_cards"])
+        self.assertTrue(data["bottom_bar_analytics"])
+
+    def test_live_analytics_endpoint_with_no_innings_returns_safe_json(self):
+        match = Match.objects.create(
+            title="No Innings Match",
+            team_1=self.team_a,
+            team_2=self.team_b,
+        )
+
+        response = self.client.get(reverse("live_analytics_api", args=[match.pk]))
+        data = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(data["ok"])
+        self.assertIsNone(data["innings_id"])
+        self.assertIsNone(data["last_ball_id"])
+        self.assertEqual(data["analytics_cards"], [])
+        self.assertEqual(data["bottom_bar_analytics"], [])
+        self.assertEqual(data["message"], "No innings available yet.")
+
+    @patch("matches.api_clients.requests.post")
+    def test_live_analytics_latest_ball_id_changes_after_new_ball(self, mock_post):
+        mock_post.side_effect = requests.exceptions.RequestException("down")
+        first_ball = self._ball(over_number=1, ball_number=1)
+
+        first_response = self.client.get(reverse("live_analytics_api", args=[self.match.pk]))
+        self._ball(over_number=1, ball_number=2)
+        second_response = self.client.get(reverse("live_analytics_api", args=[self.match.pk]))
+
+        first_data = first_response.json()
+        second_data = second_response.json()
+        self.assertEqual(first_data["last_ball_id"], first_ball.id)
+        self.assertNotEqual(first_data["last_ball_id"], second_data["last_ball_id"])
+        self.assertEqual(second_data["last_ball_label"], "1.2")
+        self.assertEqual(second_data["total_ball_events"], 2)
+
+    @patch("matches.api_clients.requests.post")
+    def test_live_analytics_api_failure_returns_error_cards_with_200(self, mock_post):
+        self._ball()
+        mock_post.side_effect = requests.exceptions.RequestException("down")
+
+        response = self.client.get(reverse("live_analytics_api", args=[self.match.pk]))
+        data = response.json()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data["analytics_cards"][0]["status"], "error")
+        self.assertEqual(data["analytics_cards"][0]["error"], ANALYTICS_UNAVAILABLE_MESSAGE)
+
+    @patch("matches.api_clients.requests.post")
+    def test_build_live_analytics_accepts_timeout(self, mock_post):
+        self._ball()
+        mock_post.side_effect = requests.exceptions.RequestException("down")
+
+        analytics_cards, bottom_bar_analytics = _build_live_analytics(
+            self.innings,
+            batting_player_id=self.a1.id,
+            bowling_player_id=self.b1.id,
+            timeout=4,
+        )
+
+        self.assertTrue(analytics_cards)
+        self.assertTrue(bottom_bar_analytics)
+        self.assertTrue(mock_post.call_args_list)
+        self.assertTrue(all(call.kwargs["timeout"] == 4 for call in mock_post.call_args_list))

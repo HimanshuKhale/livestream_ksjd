@@ -3,6 +3,353 @@
 {% block title %}Score Innings{% endblock %}
 
 {% block content %}
+<style>
+  /* Hide raw fields; visual controls write values into these Django form fields. */
+  #id_shot_zone,
+  #id_shot_type {
+    position: absolute;
+    left: -9999px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .shot-workflow-shell {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .shot-type-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  @media (min-width: 768px) {
+    .shot-type-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .shot-type-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  .shot-option {
+    min-height: 112px;
+    border: 1px solid rgba(51, 65, 85, 0.95);
+    border-radius: 1rem;
+    background: radial-gradient(circle at top, rgba(15, 118, 110, 0.22), rgba(2, 6, 23, 0.96));
+    color: #e2e8f0;
+    cursor: pointer;
+    padding: 0.75rem;
+    text-align: left;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  }
+
+  .shot-option:hover {
+    transform: translateY(-2px);
+    border-color: rgba(45, 212, 191, 0.8);
+    box-shadow: 0 0 0 4px rgba(45, 212, 191, 0.08);
+  }
+
+  .shot-option.active {
+    border-color: #2dd4bf;
+    background: radial-gradient(circle at top, rgba(45, 212, 191, 0.34), rgba(2, 6, 23, 0.98));
+    box-shadow: 0 0 0 4px rgba(45, 212, 191, 0.14), 0 18px 35px rgba(0, 0, 0, 0.28);
+  }
+
+  .shot-visual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 54px;
+    border-radius: 0.8rem;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(20, 83, 45, 0.55));
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    font-size: 1.65rem;
+    overflow: hidden;
+  }
+
+  .shot-title {
+    margin-top: 0.55rem;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #ffffff;
+  }
+
+  .shot-hint {
+    margin-top: 0.15rem;
+    font-size: 0.68rem;
+    color: #94a3b8;
+    line-height: 1.25;
+  }
+
+  .selected-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.8rem;
+    border-radius: 999px;
+    border: 1px solid rgba(45, 212, 191, 0.35);
+    background: rgba(20, 184, 166, 0.08);
+    padding: 0.45rem 0.75rem;
+    color: #5eead4;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+
+  .wagon-wrap {
+    display: grid;
+    place-items: center;
+    gap: 0.8rem;
+  }
+
+  .wagon-wheel {
+    position: relative;
+    width: min(640px, 92vw);
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    margin: 0 auto;
+    overflow: hidden;
+    border: 5px solid rgba(220, 252, 231, 0.85);
+    background:
+      radial-gradient(circle at center, rgba(190, 242, 100, 0.78) 0 35%, rgba(34, 197, 94, 0.54) 35.5% 36.4%, transparent 36.8%),
+      radial-gradient(circle at center, rgba(132, 204, 22, 0.92) 0 43%, rgba(22, 101, 52, 0.98) 44% 100%);
+    box-shadow: inset 0 0 0 3px rgba(255,255,255,0.18), 0 22px 48px rgba(0, 0, 0, 0.36);
+  }
+
+  .wagon-wheel::before {
+    content: "";
+    position: absolute;
+    inset: 22%;
+    border-radius: 50%;
+    border: 3px dashed rgba(255, 255, 255, 0.82);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .wagon-wheel::after {
+    content: "30 YARD CIRCLE";
+    position: absolute;
+    left: 50%;
+    bottom: 19%;
+    transform: translateX(-50%) rotate(-5deg);
+    color: rgba(255,255,255,0.9);
+    font-size: clamp(0.6rem, 1.4vw, 0.85rem);
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .wagon-sector-line {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 2px;
+    height: 50%;
+    transform-origin: top center;
+    background: rgba(255,255,255,0.74);
+    z-index: 1;
+  }
+
+  .wagon-sector-line.d0 { transform: rotate(0deg); }
+  .wagon-sector-line.d45 { transform: rotate(45deg); }
+  .wagon-sector-line.d90 { transform: rotate(90deg); }
+  .wagon-sector-line.d135 { transform: rotate(135deg); }
+  .wagon-sector-line.d180 { transform: rotate(180deg); }
+  .wagon-sector-line.d225 { transform: rotate(225deg); }
+  .wagon-sector-line.d270 { transform: rotate(270deg); }
+  .wagon-sector-line.d315 { transform: rotate(315deg); }
+
+  .direction-tag {
+    position: absolute;
+    z-index: 6;
+    border-radius: 0.25rem;
+    background: #020617;
+    color: white;
+    font-size: clamp(0.65rem, 1.5vw, 0.9rem);
+    font-weight: 900;
+    padding: 0.12rem 0.34rem;
+    border: 1px solid rgba(255,255,255,0.4);
+  }
+
+  .direction-tag.n { top: 1.5%; left: 50%; transform: translateX(-50%); }
+  .direction-tag.e { right: 1.5%; top: 50%; transform: translateY(-50%); }
+  .direction-tag.s { bottom: 1.5%; left: 50%; transform: translateX(-50%); }
+  .direction-tag.w { left: 1.5%; top: 50%; transform: translateY(-50%); }
+
+  .pitch {
+    position: absolute;
+    width: 9.5%;
+    height: 30%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(90deg, #caa767, #f1d59a, #caa767);
+    border: 2px solid rgba(255,255,255,0.72);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
+    z-index: 5;
+  }
+
+  .pitch::before,
+  .pitch::after {
+    content: "|||";
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #2b1c0b;
+    font-size: clamp(0.55rem, 1.4vw, 0.85rem);
+    letter-spacing: -0.05em;
+    font-weight: 900;
+  }
+
+  .pitch::before { top: 6%; }
+  .pitch::after { bottom: 6%; }
+
+  .zone-chip {
+    position: absolute;
+    z-index: 7;
+    max-width: 112px;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 999px;
+    background: rgba(2, 6, 23, 0.74);
+    color: #fff;
+    padding: 0.42rem 0.52rem;
+    font-size: clamp(0.52rem, 1.28vw, 0.72rem);
+    font-weight: 900;
+    line-height: 1.05;
+    text-align: center;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: transform 0.16s ease, background 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+  }
+
+  .zone-chip:hover {
+    transform: translate(-50%, -50%) scale(1.06);
+    background: rgba(45, 212, 191, 0.96);
+    color: #020617;
+    border-color: rgba(255,255,255,0.65);
+  }
+
+  .zone-chip.active {
+    background: #fde047;
+    color: #020617;
+    box-shadow: 0 0 0 5px rgba(253, 224, 71, 0.22), 0 0 22px rgba(253, 224, 71, 0.45);
+    border-color: #fff7ed;
+  }
+
+  .zone-chip.outer::before,
+  .zone-chip.inner::before,
+  .zone-chip.close::before {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.15rem;
+    height: 1.15rem;
+    margin-right: 0.25rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 1000;
+    vertical-align: middle;
+  }
+
+  .zone-chip.outer::before {
+    content: attr(data-number);
+    background: #fde047;
+    color: #020617;
+  }
+
+  .zone-chip.inner::before {
+    content: attr(data-number);
+    background: #052e16;
+    color: #dcfce7;
+  }
+
+  .zone-chip.close::before {
+    content: "C";
+    background: #f97316;
+    color: #111827;
+  }
+
+  /* Position helpers use center anchor. */
+  .zone-chip { transform: translate(-50%, -50%); }
+
+  .outer.long-off { left: 50%; top: 13%; }
+  .outer.deep-cover { left: 76%; top: 24%; }
+  .outer.third-point { left: 89%; top: 50%; }
+  .outer.fine-leg { left: 76%; top: 76%; }
+  .outer.long-on { left: 50%; top: 87%; }
+  .outer.deep-square-leg { left: 24%; top: 76%; }
+  .outer.deep-mid-on { left: 11%; top: 50%; }
+  .outer.deep-extra-cover { left: 24%; top: 24%; }
+
+  .inner.straight { left: 50%; top: 32%; }
+  .inner.mid-off { left: 65%; top: 37%; }
+  .inner.cover { left: 70%; top: 50%; }
+  .inner.point { left: 64%; top: 64%; }
+  .inner.fine-leg-inside { left: 50%; top: 69%; }
+  .inner.square-leg { left: 36%; top: 64%; }
+  .inner.mid-wicket { left: 30%; top: 50%; }
+  .inner.cover-point { left: 36%; top: 37%; }
+
+  .close.short-leg { left: 45%; top: 58%; }
+  .close.silly-point { left: 58%; top: 44%; }
+  .close.silly-mid-on { left: 42%; top: 44%; }
+  .close.silly-mid-wicket { left: 38%; top: 55%; }
+
+  .wagon-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.7rem;
+    color: #cbd5e1;
+    font-size: 0.72rem;
+  }
+
+  .legend-key {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .legend-swatch {
+    width: 0.9rem;
+    height: 0.9rem;
+    border-radius: 0.2rem;
+    border: 1px solid rgba(255,255,255,0.35);
+  }
+
+  .legend-swatch.inner { background: #9acd55; }
+  .legend-swatch.outer { background: #176b22; }
+  .legend-swatch.close { background: #f97316; }
+
+  .workflow-help {
+    border: 1px solid rgba(45, 212, 191, 0.18);
+    background: rgba(15, 23, 42, 0.74);
+    border-radius: 1rem;
+    padding: 0.85rem;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 640px) {
+    .zone-chip {
+      max-width: 84px;
+      padding: 0.34rem 0.38rem;
+    }
+
+    .zone-chip.outer::before,
+    .zone-chip.inner::before,
+    .zone-chip.close::before {
+      display: none;
+    }
+  }
+</style>
+
 <section class="mb-6 rounded-3xl border border-slate-800 bg-slate-900 p-6">
   <div class="flex flex-wrap items-start justify-between gap-4">
     <div>
@@ -182,23 +529,112 @@
         <div class="mb-4 flex items-center justify-between gap-3">
           <div>
             <h3 class="text-lg font-semibold text-white">Shot + Location Workflow</h3>
-            <p class="text-sm text-slate-400">Keep the current form fields, but lay them out so visual selectors can replace them later.</p>
+            <p class="text-sm text-slate-400">Choose the cricket shot visually and click the wagon wheel zone where the ball travelled.</p>
           </div>
           <span class="rounded-full border border-slate-700 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-400">Workflow 3</span>
         </div>
 
-        <div class="grid gap-4 md:grid-cols-2">
-          <div>
-            <label class="mb-1 block text-sm font-medium text-slate-300">{{ form.shot_type.label }}</label>
+        <div class="shot-workflow-shell">
+          <section class="rounded-3xl border border-slate-800 bg-slate-900/60 p-4">
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <label class="block text-sm font-semibold text-white">{{ form.shot_type.label }}</label>
+                <p class="text-xs text-slate-400">Tap a shot card. The actual Django field is saved automatically.</p>
+              </div>
+              <span id="selected-shot-type-label" class="selected-pill">Selected shot: None</span>
+            </div>
+
             {{ form.shot_type }}
-            {% for error in form.shot_type.errors %}<p class="mt-1 text-xs text-rose-400">{{ error }}</p>{% endfor %}
-          </div>
-          <div>
-            <label class="mb-1 block text-sm font-medium text-slate-300">{{ form.shot_zone.label }}</label>
+
+            <div class="shot-type-grid">
+              <button type="button" class="shot-option" data-shot="defence"><div class="shot-visual">🛡️</div><p class="shot-title">Defence</p><p class="shot-hint">Soft hands, block or dead bat.</p></button>
+              <button type="button" class="shot-option" data-shot="leave"><div class="shot-visual">🙆</div><p class="shot-title">Leave</p><p class="shot-hint">No shot offered outside line.</p></button>
+              <button type="button" class="shot-option" data-shot="straight_drive"><div class="shot-visual">🏏⬆️</div><p class="shot-title">Straight Drive</p><p class="shot-hint">Full face, straight down the ground.</p></button>
+              <button type="button" class="shot-option" data-shot="cover_drive"><div class="shot-visual">🏏↗️</div><p class="shot-title">Cover Drive</p><p class="shot-hint">Classic off-side front-foot stroke.</p></button>
+              <button type="button" class="shot-option" data-shot="on_drive"><div class="shot-visual">🏏↖️</div><p class="shot-title">On Drive</p><p class="shot-hint">Driven through mid-on / long-on.</p></button>
+              <button type="button" class="shot-option" data-shot="cut"><div class="shot-visual">✂️➡️</div><p class="shot-title">Cut</p><p class="shot-hint">Back-foot shot square of wicket.</p></button>
+              <button type="button" class="shot-option" data-shot="late_cut"><div class="shot-visual">✂️⏱️</div><p class="shot-title">Late Cut</p><p class="shot-hint">Guided late towards third man.</p></button>
+              <button type="button" class="shot-option" data-shot="pull"><div class="shot-visual">💪↙️</div><p class="shot-title">Pull</p><p class="shot-hint">Horizontal bat to leg side.</p></button>
+              <button type="button" class="shot-option" data-shot="hook"><div class="shot-visual">🪝↙️</div><p class="shot-title">Hook</p><p class="shot-hint">High short ball behind square.</p></button>
+              <button type="button" class="shot-option" data-shot="sweep"><div class="shot-visual">🧹</div><p class="shot-title">Sweep</p><p class="shot-hint">Low shot against spin.</p></button>
+              <button type="button" class="shot-option" data-shot="reverse_sweep"><div class="shot-visual">🔄🧹</div><p class="shot-title">Reverse Sweep</p><p class="shot-hint">Reverse bat angle through off side.</p></button>
+              <button type="button" class="shot-option" data-shot="flick"><div class="shot-visual">⚡↙️</div><p class="shot-title">Flick</p><p class="shot-hint">Wristy leg-side stroke.</p></button>
+              <button type="button" class="shot-option" data-shot="glance"><div class="shot-visual">👀↘️</div><p class="shot-title">Glance</p><p class="shot-hint">Deflect fine down leg side.</p></button>
+              <button type="button" class="shot-option" data-shot="lofted"><div class="shot-visual">🚀</div><p class="shot-title">Lofted Shot</p><p class="shot-hint">Hit in the air intentionally.</p></button>
+              <button type="button" class="shot-option" data-shot="slog"><div class="shot-visual">💥</div><p class="shot-title">Slog</p><p class="shot-hint">Power hit across the line.</p></button>
+              <button type="button" class="shot-option" data-shot="ramp"><div class="shot-visual">⛷️</div><p class="shot-title">Ramp / Scoop</p><p class="shot-hint">Innovative shot over keeper/fine leg.</p></button>
+            </div>
+
+            {% for error in form.shot_type.errors %}<p class="mt-2 text-xs text-rose-400">{{ error }}</p>{% endfor %}
+          </section>
+
+          <section class="rounded-3xl border border-slate-800 bg-slate-900/60 p-4">
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <label class="block text-sm font-semibold text-white">Shot Zone / Wagon Wheel</label>
+                <p class="text-xs text-slate-400">Right-handed batter view. Click one inside, outside, or close-in zone.</p>
+              </div>
+              <span id="selected-shot-zone-label" class="selected-pill">Selected zone: None</span>
+            </div>
+
             {{ form.shot_zone }}
-            {% for error in form.shot_zone.errors %}<p class="mt-1 text-xs text-rose-400">{{ error }}</p>{% endfor %}
+
+            <div class="wagon-wrap">
+              <div class="wagon-wheel" aria-label="Cricket field wagon wheel selector">
+                <div class="wagon-sector-line d0"></div>
+                <div class="wagon-sector-line d45"></div>
+                <div class="wagon-sector-line d90"></div>
+                <div class="wagon-sector-line d135"></div>
+                <div class="wagon-sector-line d180"></div>
+                <div class="wagon-sector-line d225"></div>
+                <div class="wagon-sector-line d270"></div>
+                <div class="wagon-sector-line d315"></div>
+
+                <span class="direction-tag n">N</span>
+                <span class="direction-tag e">E</span>
+                <span class="direction-tag s">S</span>
+                <span class="direction-tag w">W</span>
+                <div class="pitch"></div>
+
+                <button type="button" class="zone-chip outer long-off" data-number="1" data-zone="long_off">Long Off</button>
+                <button type="button" class="zone-chip outer deep-cover" data-number="2" data-zone="deep_cover">Deep Cover</button>
+                <button type="button" class="zone-chip outer third-point" data-number="3" data-zone="third_point">Third Point</button>
+                <button type="button" class="zone-chip outer fine-leg" data-number="4" data-zone="fine_leg">Fine Leg</button>
+                <button type="button" class="zone-chip outer long-on" data-number="5" data-zone="long_on">Long On</button>
+                <button type="button" class="zone-chip outer deep-square-leg" data-number="6" data-zone="deep_square_leg">Deep Square Leg</button>
+                <button type="button" class="zone-chip outer deep-mid-on" data-number="7" data-zone="deep_mid_on">Deep Mid On</button>
+                <button type="button" class="zone-chip outer deep-extra-cover" data-number="8" data-zone="deep_extra_cover">Deep Extra Cover</button>
+
+                <button type="button" class="zone-chip inner straight" data-number="1" data-zone="straight">Straight</button>
+                <button type="button" class="zone-chip inner mid-off" data-number="2" data-zone="mid_off">Mid Off</button>
+                <button type="button" class="zone-chip inner cover" data-number="3" data-zone="cover">Cover</button>
+                <button type="button" class="zone-chip inner point" data-number="4" data-zone="point">Point</button>
+                <button type="button" class="zone-chip inner fine-leg-inside" data-number="5" data-zone="fine_leg_inside">Fine Leg In</button>
+                <button type="button" class="zone-chip inner square-leg" data-number="6" data-zone="square_leg">Square Leg</button>
+                <button type="button" class="zone-chip inner mid-wicket" data-number="7" data-zone="mid_wicket">Mid Wicket</button>
+                <button type="button" class="zone-chip inner cover-point" data-number="8" data-zone="cover_point">Cover Point</button>
+
+                <button type="button" class="zone-chip close short-leg" data-zone="short_leg">Short Leg</button>
+                <button type="button" class="zone-chip close silly-point" data-zone="silly_point">Silly Point</button>
+                <button type="button" class="zone-chip close silly-mid-on" data-zone="silly_mid_on">Silly Mid On</button>
+                <button type="button" class="zone-chip close silly-mid-wicket" data-zone="silly_mid_wicket">Silly Mid Wicket</button>
+              </div>
+
+              <div class="wagon-legend">
+                <span class="legend-key"><span class="legend-swatch outer"></span>Outside 30-yard circle</span>
+                <span class="legend-key"><span class="legend-swatch inner"></span>Inside 30-yard circle</span>
+                <span class="legend-key"><span class="legend-swatch close"></span>Close-in catching zones</span>
+              </div>
+            </div>
+
+            {% for error in form.shot_zone.errors %}<p class="mt-2 text-xs text-rose-400">{{ error }}</p>{% endfor %}
+          </section>
+
+          <div class="workflow-help">
+            <strong class="text-white">Scoring note:</strong> Use shot type for the batter's technique and wagon zone for where the ball travelled. Example: <span class="text-emerald-300">Cover Drive + Deep Cover</span>, <span class="text-emerald-300">Pull + Deep Square Leg</span>, or <span class="text-emerald-300">Late Cut + Third Point</span>.
           </div>
-          <div class="md:col-span-2">
+
+          <div>
             <label class="mb-1 block text-sm font-medium text-slate-300">{{ form.notes.label }}</label>
             {{ form.notes }}
             {% for error in form.notes.errors %}<p class="mt-1 text-xs text-rose-400">{{ error }}</p>{% endfor %}
@@ -318,6 +754,64 @@
     }
 
     syncWorkflowSections();
+  })();
+
+  (() => {
+    const shotTypeInput = document.getElementById("id_shot_type");
+    const shotTypeOptions = document.querySelectorAll(".shot-option");
+    const selectedShotTypeLabel = document.getElementById("selected-shot-type-label");
+
+    const shotZoneInput = document.getElementById("id_shot_zone");
+    const zoneButtons = document.querySelectorAll(".zone-chip");
+    const selectedShotZoneLabel = document.getElementById("selected-shot-zone-label");
+
+    function prettify(value) {
+      if (!value) return "None";
+      return value
+        .replaceAll("_", " ")
+        .replace(/\b\w/g, char => char.toUpperCase());
+    }
+
+    function syncShotType() {
+      if (!shotTypeInput) return;
+      shotTypeOptions.forEach(option => {
+        option.classList.toggle("active", option.dataset.shot === shotTypeInput.value);
+      });
+      if (selectedShotTypeLabel) {
+        selectedShotTypeLabel.textContent = `Selected shot: ${prettify(shotTypeInput.value)}`;
+      }
+    }
+
+    function syncShotZone() {
+      if (!shotZoneInput) return;
+      zoneButtons.forEach(button => {
+        button.classList.toggle("active", button.dataset.zone === shotZoneInput.value);
+      });
+      if (selectedShotZoneLabel) {
+        selectedShotZoneLabel.textContent = `Selected zone: ${prettify(shotZoneInput.value)}`;
+      }
+    }
+
+    shotTypeOptions.forEach(option => {
+      option.addEventListener("click", () => {
+        if (!shotTypeInput) return;
+        shotTypeInput.value = option.dataset.shot;
+        shotTypeInput.dispatchEvent(new Event("change", { bubbles: true }));
+        syncShotType();
+      });
+    });
+
+    zoneButtons.forEach(button => {
+      button.addEventListener("click", () => {
+        if (!shotZoneInput) return;
+        shotZoneInput.value = button.dataset.zone;
+        shotZoneInput.dispatchEvent(new Event("change", { bubbles: true }));
+        syncShotZone();
+      });
+    });
+
+    syncShotType();
+    syncShotZone();
   })();
 </script>
 {% endblock %}
