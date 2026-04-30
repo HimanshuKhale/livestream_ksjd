@@ -11,7 +11,10 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -127,3 +130,20 @@ EXTERNAL_ANALYTICS_API_TIMEOUT = 90
 LIVE_ANALYTICS_API_TIMEOUT = 90
 STUDENT1_SPRINT2_API_BASE_URL = "https://khel-ai-st1-sp2.onrender.com"
 EXTERNAL_ANALYTICS_API_TIMEOUT = 90
+
+
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+KHEL_AI_AGENT_MODEL = os.environ.get("KHEL_AI_AGENT_MODEL", "gpt-5.4-nano")
+
+PHASE1_API_ENDPOINTS = {
+    # Add Phase 1 endpoint URLs here later if needed.
+}
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "khel-ai-live-banners",
+    }
+}
+
+LIVE_INFOGRAPHIC_TTL_SECONDS = 20

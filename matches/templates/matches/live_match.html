@@ -83,10 +83,10 @@
         Khel AI Insight
       </p>
       <h2 class="mt-2 text-2xl font-black">
-        {{ active_infographic.player.name }}
+        {{ active_infographic.player_name }}
       </h2>
       <p class="text-sm text-slate-300">
-        {{ active_infographic.get_metric_type_display }}
+        {{ active_infographic.metric_label }}
       </p>
     </div>
 
@@ -301,6 +301,7 @@
   let currentSlideIndex = 0;
   let selectedBowlerId = null;
   let currentLastBallId = {{ last_ball_metadata.last_ball_id|default:"null" }};
+  let currentBannerSignature = null;
 
   function refreshSlides() {
     slides = Array.from(document.querySelectorAll(".analytics-slide"));
@@ -458,6 +459,98 @@
     addFlash(bar);
   }
 
+  function removeLiveInfographicCard() {
+    document.getElementById("live-infographic-card")?.remove();
+    currentBannerSignature = null;
+  }
+
+  function appendText(parent, tagName, text, className) {
+    const element = document.createElement(tagName);
+    if (className) {
+      element.className = className;
+    }
+    element.textContent = text === undefined || text === null ? "" : String(text);
+    parent.appendChild(element);
+    return element;
+  }
+
+  function renderLiveInfographicCard(banner) {
+    const cardData = banner.card_data || {};
+    const nextSignature = JSON.stringify(banner);
+    if (nextSignature === currentBannerSignature) {
+      return;
+    }
+    currentBannerSignature = nextSignature;
+    removeLiveInfographicCard();
+    currentBannerSignature = nextSignature;
+
+    const section = document.createElement("section");
+    section.id = "live-infographic-card";
+    section.className = "fixed bottom-8 left-1/2 z-50 w-[92%] max-w-3xl -translate-x-1/2 rounded-3xl border border-white/20 bg-slate-950/95 p-6 text-white shadow-2xl backdrop-blur";
+
+    const header = document.createElement("div");
+    header.className = "flex items-start justify-between gap-4";
+
+    const heading = document.createElement("div");
+    appendText(heading, "p", "Khel AI Insight", "text-xs uppercase tracking-[0.3em] text-cyan-300");
+    appendText(heading, "h2", banner.player_name || "Player", "mt-2 text-2xl font-black");
+    appendText(heading, "p", banner.metric_label || banner.metric_type || "Insight", "text-sm text-slate-300");
+    header.appendChild(heading);
+
+    if (cardData.score !== undefined && cardData.score !== null && cardData.score !== "") {
+      const scoreBox = document.createElement("div");
+      scoreBox.className = "rounded-2xl bg-white px-5 py-3 text-right text-slate-950";
+      appendText(scoreBox, "div", cardData.score, "text-3xl font-black");
+      appendText(scoreBox, "div", "Score", "text-xs font-bold uppercase");
+      header.appendChild(scoreBox);
+    }
+
+    section.appendChild(header);
+
+    if (cardData.card) {
+      const insight = document.createElement("div");
+      insight.className = "mt-5 rounded-2xl bg-white/10 p-4";
+      appendText(insight, "h3", cardData.card.title || "Insight", "text-xl font-bold");
+      appendText(insight, "p", cardData.card.insight || cardData.summary || "", "mt-2 text-slate-200");
+      appendText(insight, "div", cardData.grade || "", "mt-3 text-sm text-slate-300");
+      section.appendChild(insight);
+    } else if (cardData.summary || cardData.error) {
+      const insight = document.createElement("div");
+      insight.className = "mt-5 rounded-2xl bg-white/10 p-4";
+      appendText(insight, "p", cardData.summary || cardData.error || "", "text-slate-200");
+      section.appendChild(insight);
+    }
+
+    if (Array.isArray(cardData.cards) && cardData.cards.length) {
+      const grid = document.createElement("div");
+      grid.className = "mt-5 grid gap-3 md:grid-cols-3";
+      cardData.cards.forEach(function (item) {
+        const tile = document.createElement("div");
+        tile.className = "rounded-2xl bg-white/10 p-4";
+        appendText(tile, "div", item.label || "", "text-sm text-slate-300");
+        appendText(tile, "div", item.value || "", "text-3xl font-black");
+        appendText(tile, "div", item.insight || "", "mt-2 text-sm");
+        grid.appendChild(tile);
+      });
+      section.appendChild(grid);
+    }
+
+    document.querySelector("body").appendChild(section);
+    addFlash(section);
+  }
+
+  function renderLiveInfographics(activeInfographics, activeInfographic) {
+    const banners = Array.isArray(activeInfographics) ? activeInfographics : [];
+    const banner = banners.length ? banners[0] : activeInfographic;
+
+    if (!banner) {
+      removeLiveInfographicCard();
+      return;
+    }
+
+    renderLiveInfographicCard(banner);
+  }
+
   function pollLiveAnalytics() {
     fetch("/api/live/{{ match.id }}/analytics/")
       .then(function (response) {
@@ -465,6 +558,8 @@
       })
       .then(function (data) {
         if (!data.ok) return;
+        renderLiveInfographics(data.active_infographics || [], data.active_infographic || null);
+
         if (data.last_ball_id === currentLastBallId) return;
 
         currentLastBallId = data.last_ball_id;
@@ -548,6 +643,6 @@
 
   refreshSlides();
   showSlide(currentSlideIndex);
-  setInterval(pollLiveAnalytics, 5000);
+  setInterval(pollLiveAnalytics, 2000);
 </script>
 {% endblock %}

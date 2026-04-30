@@ -36,4 +36,9 @@ urlpatterns = [
         views.remove_infographic_card,
         name="remove_infographic_card",
     ),
+    path(
+    "api/agent/<int:match_id>/",
+    views.khel_ai_agent_api,
+    name="khel_ai_agent_api",
+    ),
 ]
