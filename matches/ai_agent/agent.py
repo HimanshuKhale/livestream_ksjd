@@ -13,6 +13,10 @@ from matches.ai_agent.tools import (
     call_student1_consistency_index,
     call_student1_pressure_performance,
     call_student1_shot_risk_efficiency,
+    call_student2_bowling_economy_tool,
+    call_student2_wicket_probability_tool,
+    call_student2_control_entropy_tool,
+    call_student2_full_bowling_analysis_tool,
     create_agent_banner,
     create_api_result_banner,
 )
@@ -45,16 +49,29 @@ def _as_bool(value: Any) -> bool:
         return value.strip().lower() in {"true", "1", "yes"}
     return bool(value)
 
+def _pick_default_player(innings: Innings, context: Dict[str, Any], role: str = "batter") -> Optional[Player]:
+    if role == "bowler":
+        bowler_id = context.get("current_state", {}).get("bowler_id")
+        if bowler_id:
+            return Player.objects.filter(id=bowler_id).first()
 
-def _pick_default_player(innings: Innings, context: Dict[str, Any]) -> Optional[Player]:
+        latest_ball = innings.ball_events.select_related("bowler").order_by("-id").first()
+        if latest_ball:
+            return latest_ball.bowler
+
+        return innings.bowling_team.players.first()
+
     striker_id = context.get("current_state", {}).get("striker_id")
     if striker_id:
         return Player.objects.filter(id=striker_id).first()
 
     return innings.batting_team.players.first()
 
-
-def _find_player_from_request(banner_request: Dict[str, Any], innings: Innings, context: Dict[str, Any]) -> Optional[Player]:
+def _find_player_from_request(
+    banner_request: Dict[str, Any],
+    innings: Innings,
+    context: Dict[str, Any],
+) -> Optional[Player]:
     player_id = banner_request.get("player_id")
 
     if player_id:
@@ -62,8 +79,19 @@ def _find_player_from_request(banner_request: Dict[str, Any], innings: Innings, 
         if player:
             return player
 
-    return _pick_default_player(innings, context)
+    metric_type = banner_request.get("metric_type") or ""
 
+    bowling_metrics = {
+        "bowling_economy_deviation",
+        "wicket_probability_model",
+        "control_entropy_model",
+        "full_bowling_analysis",
+    }
+
+    if metric_type in bowling_metrics:
+        return _pick_default_player(innings, context, role="bowler")
+
+    return _pick_default_player(innings, context, role="batter")
 
 def _run_metric_tool(metric_type: str, innings: Innings, player: Player):
     if metric_type == "batting_dashboard":
@@ -78,8 +106,19 @@ def _run_metric_tool(metric_type: str, innings: Innings, player: Player):
     if metric_type == "shot_risk_efficiency":
         return call_student1_shot_risk_efficiency(innings, player)
 
-    return call_student1_batting_dashboard(innings, player)
+    if metric_type == "bowling_economy_deviation":
+        return call_student2_bowling_economy_tool(innings, player)
 
+    if metric_type == "wicket_probability_model":
+        return call_student2_wicket_probability_tool(innings, player)
+
+    if metric_type == "control_entropy_model":
+        return call_student2_control_entropy_tool(innings, player)
+
+    if metric_type == "full_bowling_analysis":
+        return call_student2_full_bowling_analysis_tool(innings, player)
+
+    return call_student1_batting_dashboard(innings, player)
 
 def run_khel_ai_agent(
     match: Match,
@@ -124,6 +163,10 @@ Available metric types:
 - consistency_index
 - pressure_performance
 - shot_risk_efficiency
+- bowling_economy_deviation
+- wicket_probability_model
+- control_entropy_model
+- full_bowling_analysis
 - agent_insight
 
 Always answer in chat. Set should_create_banner to true only when the admin explicitly asks to show/create/display a banner/card/infographic on the live screen.

@@ -149,3 +149,45 @@ def call_student1_shot_risk_efficiency(payload, timeout=None):
         payload,
         timeout=timeout,
     )
+
+
+def _post_json(url, payload, timeout=90):
+    response = requests.post(url, json=payload, timeout=timeout)
+    response.raise_for_status()
+    return response.json()
+
+
+def call_student2_bowling_economy_deviation(payload):
+    url = f"{settings.STUDENT2_SPRINT2_API_BASE_URL}/student2/bowling-economy-deviation"
+    return _post_json(
+        url,
+        payload,
+        timeout=getattr(settings, "STUDENT2_SPRINT2_API_TIMEOUT", 90),
+    )
+
+
+def call_student2_wicket_probability_model(payload):
+    url = f"{settings.STUDENT2_SPRINT2_API_BASE_URL}/student2/wicket-probability-model"
+    return _post_json(
+        url,
+        payload,
+        timeout=getattr(settings, "STUDENT2_SPRINT2_API_TIMEOUT", 90),
+    )
+
+
+def call_student2_control_entropy_model(payload):
+    url = f"{settings.STUDENT2_SPRINT2_API_BASE_URL}/student2/control-entropy-model"
+    return _post_json(
+        url,
+        payload,
+        timeout=getattr(settings, "STUDENT2_SPRINT2_API_TIMEOUT", 90),
+    )
+
+
+def call_student2_full_bowling_analysis(payload):
+    url = f"{settings.STUDENT2_SPRINT2_API_BASE_URL}/student2/full-bowling-analysis"
+    return _post_json(
+        url,
+        payload,
+        timeout=getattr(settings, "STUDENT2_SPRINT2_API_TIMEOUT", 90),
+    )

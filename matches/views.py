@@ -26,6 +26,14 @@ from django.contrib.auth.decorators import login_required
 from matches.ai_agent.agent import run_khel_ai_agent
 from django.core.cache import cache
 
+from .student2_sprint2_payloads import build_student2_sprint2_payloads
+from .api_clients import (
+    call_student2_bowling_economy_deviation,
+    call_student2_wicket_probability_model,
+    call_student2_control_entropy_model,
+    call_student2_full_bowling_analysis,
+)
+
 
 
 def home(request):
@@ -745,3 +753,147 @@ def khel_ai_agent_api(request, match_id):
 
 def _live_banner_cache_key(innings_id):
     return f"live_infographic_banner:innings:{innings_id}"
+
+
+def student2_bowling_economy_deviation_proxy_api(request, innings_id, player_id):
+    innings = get_object_or_404(
+        Innings.objects.select_related("match", "batting_team", "bowling_team"),
+        pk=innings_id,
+    )
+    bowler = get_object_or_404(Player, pk=player_id)
+
+    payloads = build_student2_sprint2_payloads(innings, bowler)
+
+    if payloads is None:
+        return JsonResponse(
+            {"error": "No ball events found for this bowler in this innings."},
+            status=404,
+        )
+
+    try:
+        result = call_student2_bowling_economy_deviation(payloads["economy_data"])
+    except requests.exceptions.Timeout:
+        return JsonResponse(
+            {"error": "Student 2 Sprint 2 API is waking up. Please try again."},
+            status=504,
+        )
+    except requests.exceptions.RequestException as exc:
+        return JsonResponse(
+            {"error": "Student 2 Bowling Economy API request failed.", "detail": str(exc)},
+            status=502,
+        )
+
+    return JsonResponse(
+        {
+            "payload_sent": payloads["economy_data"],
+            "api_response": result,
+        }
+    )
+
+
+def student2_wicket_probability_proxy_api(request, innings_id, player_id):
+    innings = get_object_or_404(
+        Innings.objects.select_related("match", "batting_team", "bowling_team"),
+        pk=innings_id,
+    )
+    bowler = get_object_or_404(Player, pk=player_id)
+
+    payloads = build_student2_sprint2_payloads(innings, bowler)
+
+    if payloads is None:
+        return JsonResponse(
+            {"error": "No ball events found for this bowler in this innings."},
+            status=404,
+        )
+
+    try:
+        result = call_student2_wicket_probability_model(payloads["wicket_data"])
+    except requests.exceptions.Timeout:
+        return JsonResponse(
+            {"error": "Student 2 Sprint 2 API is waking up. Please try again."},
+            status=504,
+        )
+    except requests.exceptions.RequestException as exc:
+        return JsonResponse(
+            {"error": "Student 2 Wicket Probability API request failed.", "detail": str(exc)},
+            status=502,
+        )
+
+    return JsonResponse(
+        {
+            "payload_sent": payloads["wicket_data"],
+            "api_response": result,
+        }
+    )
+
+
+def student2_control_entropy_proxy_api(request, innings_id, player_id):
+    innings = get_object_or_404(
+        Innings.objects.select_related("match", "batting_team", "bowling_team"),
+        pk=innings_id,
+    )
+    bowler = get_object_or_404(Player, pk=player_id)
+
+    payloads = build_student2_sprint2_payloads(innings, bowler)
+
+    if payloads is None:
+        return JsonResponse(
+            {"error": "No ball events found for this bowler in this innings."},
+            status=404,
+        )
+
+    try:
+        result = call_student2_control_entropy_model(payloads["control_data"])
+    except requests.exceptions.Timeout:
+        return JsonResponse(
+            {"error": "Student 2 Sprint 2 API is waking up. Please try again."},
+            status=504,
+        )
+    except requests.exceptions.RequestException as exc:
+        return JsonResponse(
+            {"error": "Student 2 Control Entropy API request failed.", "detail": str(exc)},
+            status=502,
+        )
+
+    return JsonResponse(
+        {
+            "payload_sent": payloads["control_data"],
+            "api_response": result,
+        }
+    )
+
+
+def student2_full_bowling_analysis_proxy_api(request, innings_id, player_id):
+    innings = get_object_or_404(
+        Innings.objects.select_related("match", "batting_team", "bowling_team"),
+        pk=innings_id,
+    )
+    bowler = get_object_or_404(Player, pk=player_id)
+
+    payloads = build_student2_sprint2_payloads(innings, bowler)
+
+    if payloads is None:
+        return JsonResponse(
+            {"error": "No ball events found for this bowler in this innings."},
+            status=404,
+        )
+
+    try:
+        result = call_student2_full_bowling_analysis(payloads["full_analysis_data"])
+    except requests.exceptions.Timeout:
+        return JsonResponse(
+            {"error": "Student 2 Sprint 2 API is waking up. Please try again."},
+            status=504,
+        )
+    except requests.exceptions.RequestException as exc:
+        return JsonResponse(
+            {"error": "Student 2 Full Bowling Analysis API request failed.", "detail": str(exc)},
+            status=502,
+        )
+
+    return JsonResponse(
+        {
+            "payload_sent": payloads["full_analysis_data"],
+            "api_response": result,
+        }
+    )

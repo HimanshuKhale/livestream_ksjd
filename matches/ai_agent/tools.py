@@ -9,6 +9,16 @@ from matches.models import Match, Innings, Player
 from matches.sprint2_payloads import build_student1_sprint2_payload
 from matches.ai_agent.schemas import AgentToolResult
 
+from matches.student2_sprint2_payloads import build_student2_sprint2_payloads
+
+from matches.api_clients import (
+    call_student2_bowling_economy_deviation,
+    call_student2_wicket_probability_model,
+    call_student2_control_entropy_model,
+    call_student2_full_bowling_analysis,
+)
+
+
 
 def _post_json(url: str, payload: Dict[str, Any], timeout: Optional[int] = None) -> Dict[str, Any]:
     response = requests.post(
@@ -190,6 +200,10 @@ def create_temporary_live_banner(
             "consistency_index": "Batting Consistency Index",
             "pressure_performance": "Pressure Performance Index",
             "shot_risk_efficiency": "Shot Risk Efficiency",
+            "bowling_economy_deviation": "Bowling Economy Deviation",
+            "wicket_probability_model": "Wicket Probability Model",
+            "control_entropy_model": "Control Entropy Model",
+            "full_bowling_analysis": "Full Bowling Analysis",
             "agent_insight": "Khel AI Insight",
         }
         banner_payload = {
@@ -246,3 +260,123 @@ def create_api_result_banner(
 
     except Exception as exc:
         return AgentToolResult(False, "create_api_result_banner", error=str(exc))
+
+
+def call_student2_bowling_economy_tool(innings: Innings, player: Player) -> AgentToolResult:
+    try:
+        payloads = build_student2_sprint2_payloads(innings, player)
+
+        if payloads is None:
+            return AgentToolResult(
+                ok=False,
+                tool_name="call_student2_bowling_economy_tool",
+                error="No ball events found for this bowler.",
+            )
+
+        data = call_student2_bowling_economy_deviation(payloads["economy_data"])
+
+        return AgentToolResult(
+            ok=True,
+            tool_name="call_student2_bowling_economy_tool",
+            data={
+                "payload_sent": payloads["economy_data"],
+                "api_response": data,
+            },
+        )
+
+    except Exception as exc:
+        return AgentToolResult(
+            ok=False,
+            tool_name="call_student2_bowling_economy_tool",
+            error=str(exc),
+        )
+
+
+def call_student2_wicket_probability_tool(innings: Innings, player: Player) -> AgentToolResult:
+    try:
+        payloads = build_student2_sprint2_payloads(innings, player)
+
+        if payloads is None:
+            return AgentToolResult(
+                ok=False,
+                tool_name="call_student2_wicket_probability_tool",
+                error="No ball events found for this bowler.",
+            )
+
+        data = call_student2_wicket_probability_model(payloads["wicket_data"])
+
+        return AgentToolResult(
+            ok=True,
+            tool_name="call_student2_wicket_probability_tool",
+            data={
+                "payload_sent": payloads["wicket_data"],
+                "api_response": data,
+            },
+        )
+
+    except Exception as exc:
+        return AgentToolResult(
+            ok=False,
+            tool_name="call_student2_wicket_probability_tool",
+            error=str(exc),
+        )
+
+
+def call_student2_control_entropy_tool(innings: Innings, player: Player) -> AgentToolResult:
+    try:
+        payloads = build_student2_sprint2_payloads(innings, player)
+
+        if payloads is None:
+            return AgentToolResult(
+                ok=False,
+                tool_name="call_student2_control_entropy_tool",
+                error="No ball events found for this bowler.",
+            )
+
+        data = call_student2_control_entropy_model(payloads["control_data"])
+
+        return AgentToolResult(
+            ok=True,
+            tool_name="call_student2_control_entropy_tool",
+            data={
+                "payload_sent": payloads["control_data"],
+                "api_response": data,
+            },
+        )
+
+    except Exception as exc:
+        return AgentToolResult(
+            ok=False,
+            tool_name="call_student2_control_entropy_tool",
+            error=str(exc),
+        )
+
+
+def call_student2_full_bowling_analysis_tool(innings: Innings, player: Player) -> AgentToolResult:
+    try:
+        payloads = build_student2_sprint2_payloads(innings, player)
+
+        if payloads is None:
+            return AgentToolResult(
+                ok=False,
+                tool_name="call_student2_full_bowling_analysis_tool",
+                error="No ball events found for this bowler.",
+            )
+
+        data = call_student2_full_bowling_analysis(payloads["full_analysis_data"])
+
+        return AgentToolResult(
+            ok=True,
+            tool_name="call_student2_full_bowling_analysis_tool",
+            data={
+                "payload_sent": payloads["full_analysis_data"],
+                "api_response": data,
+            },
+        )
+
+    except Exception as exc:
+        return AgentToolResult(
+            ok=False,
+            tool_name="call_student2_full_bowling_analysis_tool",
+            error=str(exc),
+        )

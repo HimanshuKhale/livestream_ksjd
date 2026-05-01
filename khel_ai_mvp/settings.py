@@ -147,3 +147,12 @@ CACHES = {
 }
 
 LIVE_INFOGRAPHIC_TTL_SECONDS = 20
+
+STUDENT2_SPRINT2_API_BASE_URL = os.environ.get(
+    "STUDENT2_SPRINT2_API_BASE_URL",
+    "https://khel-ai-st2-sp2.onrender.com"
+)
+
+STUDENT2_SPRINT2_API_TIMEOUT = int(
+    os.environ.get("STUDENT2_SPRINT2_API_TIMEOUT", "90")
+)

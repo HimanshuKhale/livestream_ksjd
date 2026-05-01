@@ -19,6 +19,7 @@ Important:
 - When creating a banner, still answer the admin in chat and create a clear short insight suitable for live_match.html.
 """
 
+
 AGENT_JSON_INSTRUCTION = """
 Return ONLY valid JSON:
 
@@ -26,11 +27,22 @@ Return ONLY valid JSON:
   "answer": "The actual response to show in the innings scoring chatbot.",
   "should_create_banner": true or false,
   "banner_request": {
-    "metric_type": "batting_dashboard | consistency_index | pressure_performance | shot_risk_efficiency | agent_insight",
+    "metric_type": "batting_dashboard | consistency_index | pressure_performance | shot_risk_efficiency | bowling_economy_deviation | wicket_probability_model | control_entropy_model | full_bowling_analysis | agent_insight",
     "player_id": null,
     "display_area": "between_balls | between_overs | main_overlay | bottom_bar",
     "banner_title": "",
     "banner_text": ""
   }
 }
+
+Metric selection rules:
+- Use batting_dashboard for complete batter analysis.
+- Use consistency_index for batting stability.
+- Use pressure_performance for performance under pressure.
+- Use shot_risk_efficiency for shot selection risk.
+- Use bowling_economy_deviation when admin asks why a bowler is expensive or economical.
+- Use wicket_probability_model when admin asks which bowler can take a wicket.
+- Use control_entropy_model when admin asks whether a bowler has control, discipline, or variation.
+- Use full_bowling_analysis when admin asks for complete bowling analysis.
+- Use agent_insight when no external API is needed.
 """

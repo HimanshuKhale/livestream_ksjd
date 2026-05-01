@@ -41,4 +41,24 @@ urlpatterns = [
     views.khel_ai_agent_api,
     name="khel_ai_agent_api",
     ),
+    path(
+    "api/innings/<int:innings_id>/bowler/<int:player_id>/student2/economy-deviation/",
+    views.student2_bowling_economy_deviation_proxy_api,
+    name="student2_bowling_economy_deviation_proxy_api",
+    ),
+    path(
+        "api/innings/<int:innings_id>/bowler/<int:player_id>/student2/wicket-probability/",
+        views.student2_wicket_probability_proxy_api,
+        name="student2_wicket_probability_proxy_api",
+    ),
+    path(
+        "api/innings/<int:innings_id>/bowler/<int:player_id>/student2/control-entropy/",
+        views.student2_control_entropy_proxy_api,
+        name="student2_control_entropy_proxy_api",
+    ),
+    path(
+        "api/innings/<int:innings_id>/bowler/<int:player_id>/student2/full-bowling-analysis/",
+        views.student2_full_bowling_analysis_proxy_api,
+        name="student2_full_bowling_analysis_proxy_api",
+    ),
 ]
