@@ -191,3 +191,38 @@ def call_student2_full_bowling_analysis(payload):
         payload,
         timeout=getattr(settings, "STUDENT2_SPRINT2_API_TIMEOUT", 90),
     )
+
+def call_student3_weighted_contribution_index(payload):
+    url = f"{settings.STUDENT3_SPRINT2_API_BASE_URL}/student3/weighted-contribution-index"
+    return _post_json(
+        url,
+        payload,
+        timeout=getattr(settings, "STUDENT3_SPRINT2_API_TIMEOUT", 90),
+    )
+
+
+def call_student3_correlation_analysis(payload):
+    url = f"{settings.STUDENT3_SPRINT2_API_BASE_URL}/student3/correlation-analysis"
+    return _post_json(
+        url,
+        payload,
+        timeout=getattr(settings, "STUDENT3_SPRINT2_API_TIMEOUT", 90),
+    )
+
+
+def call_student3_performance_variance_model(payload):
+    url = f"{settings.STUDENT3_SPRINT2_API_BASE_URL}/student3/performance-variance-model"
+    return _post_json(
+        url,
+        payload,
+        timeout=getattr(settings, "STUDENT3_SPRINT2_API_TIMEOUT", 90),
+    )
+
+
+def call_student3_full_all_rounder_analysis(payload):
+    url = f"{settings.STUDENT3_SPRINT2_API_BASE_URL}/student3/full-all-rounder-analysis"
+    return _post_json(
+        url,
+        payload,
+        timeout=getattr(settings, "STUDENT3_SPRINT2_API_TIMEOUT", 90),
+    )

@@ -156,3 +156,12 @@ STUDENT2_SPRINT2_API_BASE_URL = os.environ.get(
 STUDENT2_SPRINT2_API_TIMEOUT = int(
     os.environ.get("STUDENT2_SPRINT2_API_TIMEOUT", "90")
 )
+
+STUDENT3_SPRINT2_API_BASE_URL = os.environ.get(
+    "STUDENT3_SPRINT2_API_BASE_URL",
+    "https://khel-ai-st3-sp2.onrender.com"
+)
+
+STUDENT3_SPRINT2_API_TIMEOUT = int(
+    os.environ.get("STUDENT3_SPRINT2_API_TIMEOUT", "90")
+)

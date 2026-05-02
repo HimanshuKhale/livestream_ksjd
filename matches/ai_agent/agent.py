@@ -19,6 +19,10 @@ from matches.ai_agent.tools import (
     call_student2_full_bowling_analysis_tool,
     create_agent_banner,
     create_api_result_banner,
+    call_student3_weighted_contribution_tool,
+    call_student3_correlation_analysis_tool,
+    call_student3_performance_variance_tool,
+    call_student3_full_all_rounder_analysis_tool,
 )
 from matches.ai_agent.memory import save_agent_interaction
 
@@ -118,6 +122,18 @@ def _run_metric_tool(metric_type: str, innings: Innings, player: Player):
     if metric_type == "full_bowling_analysis":
         return call_student2_full_bowling_analysis_tool(innings, player)
 
+    if metric_type == "weighted_contribution_index":
+        return call_student3_weighted_contribution_tool(innings, player)
+
+    if metric_type == "correlation_analysis":
+        return call_student3_correlation_analysis_tool(innings, player)
+
+    if metric_type == "performance_variance":
+        return call_student3_performance_variance_tool(innings, player)
+
+    if metric_type == "full_all_rounder_analysis":
+        return call_student3_full_all_rounder_analysis_tool(innings, player)
+
     return call_student1_batting_dashboard(innings, player)
 
 def run_khel_ai_agent(
@@ -168,6 +184,10 @@ Available metric types:
 - control_entropy_model
 - full_bowling_analysis
 - agent_insight
+- weighted_contribution_index
+- correlation_analysis
+- performance_variance_model
+- full_all_rounder_analysis
 
 Always answer in chat. Set should_create_banner to true only when the admin explicitly asks to show/create/display a banner/card/infographic on the live screen.
 """

@@ -10,12 +10,17 @@ from matches.sprint2_payloads import build_student1_sprint2_payload
 from matches.ai_agent.schemas import AgentToolResult
 
 from matches.student2_sprint2_payloads import build_student2_sprint2_payloads
+from matches.student3_sprint2_payloads import build_student3_sprint2_payloads
 
 from matches.api_clients import (
     call_student2_bowling_economy_deviation,
     call_student2_wicket_probability_model,
     call_student2_control_entropy_model,
     call_student2_full_bowling_analysis,
+    call_student3_weighted_contribution_index,
+    call_student3_correlation_analysis,
+    call_student3_performance_variance_model,
+    call_student3_full_all_rounder_analysis,
 )
 
 
@@ -205,6 +210,10 @@ def create_temporary_live_banner(
             "control_entropy_model": "Control Entropy Model",
             "full_bowling_analysis": "Full Bowling Analysis",
             "agent_insight": "Khel AI Insight",
+            "weighted_contribution_index": "Weighted Contribution Index",
+            "correlation_analysis": "All-Rounder Correlation Analysis",
+            "performance_variance_model": "Performance Variance Model",
+            "full_all_rounder_analysis": "Full All-Rounder Analysis",
         }
         banner_payload = {
             "id": f"temp-banner-{innings.id}",
@@ -378,5 +387,82 @@ def call_student2_full_bowling_analysis_tool(innings: Innings, player: Player) -
         return AgentToolResult(
             ok=False,
             tool_name="call_student2_full_bowling_analysis_tool",
+            error=str(exc),
+        )
+
+def call_student3_weighted_contribution_tool(innings: Innings, player: Player) -> AgentToolResult:
+    try:
+        payloads = build_student3_sprint2_payloads(innings, player)
+
+        data = call_student3_weighted_contribution_index(
+            payloads["weighted_contribution_data"]
+        )
+
+        return AgentToolResult(
+            ok=True,
+            tool_name="call_student3_weighted_contribution_tool",
+            data={"payload_sent": payloads["weighted_contribution_data"], "api_response": data},
+        )
+    except Exception as exc:
+        return AgentToolResult(
+            ok=False,
+            tool_name="call_student3_weighted_contribution_tool",
+            error=str(exc),
+        )
+
+
+def call_student3_correlation_analysis_tool(innings: Innings, player: Player) -> AgentToolResult:
+    try:
+        payloads = build_student3_sprint2_payloads(innings, player)
+
+        data = call_student3_correlation_analysis(payloads["correlation_data"])
+
+        return AgentToolResult(
+            ok=True,
+            tool_name="call_student3_correlation_analysis_tool",
+            data={"payload_sent": payloads["correlation_data"], "api_response": data},
+        )
+    except Exception as exc:
+        return AgentToolResult(
+            ok=False,
+            tool_name="call_student3_correlation_analysis_tool",
+            error=str(exc),
+        )
+
+
+def call_student3_performance_variance_tool(innings: Innings, player: Player) -> AgentToolResult:
+    try:
+        payloads = build_student3_sprint2_payloads(innings, player)
+
+        data = call_student3_performance_variance_model(payloads["variance_data"])
+
+        return AgentToolResult(
+            ok=True,
+            tool_name="call_student3_performance_variance_tool",
+            data={"payload_sent": payloads["variance_data"], "api_response": data},
+        )
+    except Exception as exc:
+        return AgentToolResult(
+            ok=False,
+            tool_name="call_student3_performance_variance_tool",
+            error=str(exc),
+        )
+
+
+def call_student3_full_all_rounder_analysis_tool(innings: Innings, player: Player) -> AgentToolResult:
+    try:
+        payloads = build_student3_sprint2_payloads(innings, player)
+
+        data = call_student3_full_all_rounder_analysis(payloads["full_analysis_data"])
+
+        return AgentToolResult(
+            ok=True,
+            tool_name="call_student3_full_all_rounder_analysis_tool",
+            data={"payload_sent": payloads["full_analysis_data"], "api_response": data},
+        )
+    except Exception as exc:
+        return AgentToolResult(
+            ok=False,
+            tool_name="call_student3_full_all_rounder_analysis_tool",
             error=str(exc),
         )

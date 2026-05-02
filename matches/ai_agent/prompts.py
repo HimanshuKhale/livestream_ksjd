@@ -27,7 +27,7 @@ Return ONLY valid JSON:
   "answer": "The actual response to show in the innings scoring chatbot.",
   "should_create_banner": true or false,
   "banner_request": {
-    "metric_type": "batting_dashboard | consistency_index | pressure_performance | shot_risk_efficiency | bowling_economy_deviation | wicket_probability_model | control_entropy_model | full_bowling_analysis | agent_insight",
+    "metric_type": "batting_dashboard | consistency_index | pressure_performance | shot_risk_efficiency | bowling_economy_deviation | wicket_probability_model | control_entropy_model | full_bowling_analysis | agent_insight weighted_contribution_index | correlation_analysis | performance_variance_model | full_all_rounder_analysis",
     "player_id": null,
     "display_area": "between_balls | between_overs | main_overlay | bottom_bar",
     "banner_title": "",
@@ -45,4 +45,8 @@ Metric selection rules:
 - Use control_entropy_model when admin asks whether a bowler has control, discipline, or variation.
 - Use full_bowling_analysis when admin asks for complete bowling analysis.
 - Use agent_insight when no external API is needed.
+- Use weighted_contribution_index when admin asks about total all-rounder value.
+- Use correlation_analysis when admin asks whether batting and bowling move together.
+- Use performance_variance_model when admin asks whether an all-rounder is reliable or consistent.
+- Use full_all_rounder_analysis when admin asks for complete all-rounder analysis.
 """

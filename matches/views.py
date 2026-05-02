@@ -27,11 +27,17 @@ from matches.ai_agent.agent import run_khel_ai_agent
 from django.core.cache import cache
 
 from .student2_sprint2_payloads import build_student2_sprint2_payloads
+from .student3_sprint2_payloads import build_student3_sprint2_payloads
+
 from .api_clients import (
     call_student2_bowling_economy_deviation,
     call_student2_wicket_probability_model,
     call_student2_control_entropy_model,
     call_student2_full_bowling_analysis,
+    call_student3_weighted_contribution_index,
+    call_student3_correlation_analysis,
+    call_student3_performance_variance_model,
+    call_student3_full_all_rounder_analysis,
 )
 
 
@@ -897,3 +903,68 @@ def student2_full_bowling_analysis_proxy_api(request, innings_id, player_id):
             "api_response": result,
         }
     )
+
+def student3_weighted_contribution_proxy_api(request, innings_id, player_id):
+    innings = get_object_or_404(Innings, pk=innings_id)
+    player = get_object_or_404(Player, pk=player_id)
+
+    payloads = build_student3_sprint2_payloads(innings, player)
+
+    try:
+        result = call_student3_weighted_contribution_index(
+            payloads["weighted_contribution_data"]
+        )
+    except requests.exceptions.Timeout:
+        return JsonResponse({"error": "Student 3 Sprint 2 API is waking up. Please try again."}, status=504)
+    except requests.exceptions.RequestException as exc:
+        return JsonResponse({"error": "Student 3 Weighted Contribution API failed.", "detail": str(exc)}, status=502)
+
+    return JsonResponse({"payload_sent": payloads["weighted_contribution_data"], "api_response": result})
+
+
+def student3_correlation_analysis_proxy_api(request, innings_id, player_id):
+    innings = get_object_or_404(Innings, pk=innings_id)
+    player = get_object_or_404(Player, pk=player_id)
+
+    payloads = build_student3_sprint2_payloads(innings, player)
+
+    try:
+        result = call_student3_correlation_analysis(payloads["correlation_data"])
+    except requests.exceptions.Timeout:
+        return JsonResponse({"error": "Student 3 Sprint 2 API is waking up. Please try again."}, status=504)
+    except requests.exceptions.RequestException as exc:
+        return JsonResponse({"error": "Student 3 Correlation Analysis API failed.", "detail": str(exc)}, status=502)
+
+    return JsonResponse({"payload_sent": payloads["correlation_data"], "api_response": result})
+
+
+def student3_performance_variance_proxy_api(request, innings_id, player_id):
+    innings = get_object_or_404(Innings, pk=innings_id)
+    player = get_object_or_404(Player, pk=player_id)
+
+    payloads = build_student3_sprint2_payloads(innings, player)
+
+    try:
+        result = call_student3_performance_variance_model(payloads["variance_data"])
+    except requests.exceptions.Timeout:
+        return JsonResponse({"error": "Student 3 Sprint 2 API is waking up. Please try again."}, status=504)
+    except requests.exceptions.RequestException as exc:
+        return JsonResponse({"error": "Student 3 Performance Variance API failed.", "detail": str(exc)}, status=502)
+
+    return JsonResponse({"payload_sent": payloads["variance_data"], "api_response": result})
+
+
+def student3_full_all_rounder_analysis_proxy_api(request, innings_id, player_id):
+    innings = get_object_or_404(Innings, pk=innings_id)
+    player = get_object_or_404(Player, pk=player_id)
+
+    payloads = build_student3_sprint2_payloads(innings, player)
+
+    try:
+        result = call_student3_full_all_rounder_analysis(payloads["full_analysis_data"])
+    except requests.exceptions.Timeout:
+        return JsonResponse({"error": "Student 3 Sprint 2 API is waking up. Please try again."}, status=504)
+    except requests.exceptions.RequestException as exc:
+        return JsonResponse({"error": "Student 3 Full All-Rounder API failed.", "detail": str(exc)}, status=502)
+
+    return JsonResponse({"payload_sent": payloads["full_analysis_data"], "api_response": result})
