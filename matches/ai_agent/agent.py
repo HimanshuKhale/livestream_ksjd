@@ -98,6 +98,8 @@ def _find_player_from_request(
     return _pick_default_player(innings, context, role="batter")
 
 def _run_metric_tool(metric_type: str, innings: Innings, player: Player):
+
+    # ---------- STUDENT 1 ----------
     if metric_type == "batting_dashboard":
         return call_student1_batting_dashboard(innings, player)
 
@@ -110,6 +112,8 @@ def _run_metric_tool(metric_type: str, innings: Innings, player: Player):
     if metric_type == "shot_risk_efficiency":
         return call_student1_shot_risk_efficiency(innings, player)
 
+
+    # ---------- STUDENT 2 ----------
     if metric_type == "bowling_economy_deviation":
         return call_student2_bowling_economy_tool(innings, player)
 
@@ -122,19 +126,56 @@ def _run_metric_tool(metric_type: str, innings: Innings, player: Player):
     if metric_type == "full_bowling_analysis":
         return call_student2_full_bowling_analysis_tool(innings, player)
 
+
+    # ---------- STUDENT 3 ----------
     if metric_type == "weighted_contribution_index":
         return call_student3_weighted_contribution_tool(innings, player)
 
     if metric_type == "correlation_analysis":
         return call_student3_correlation_analysis_tool(innings, player)
 
-    if metric_type == "performance_variance":
+    if metric_type == "performance_variance_model":
         return call_student3_performance_variance_tool(innings, player)
 
     if metric_type == "full_all_rounder_analysis":
         return call_student3_full_all_rounder_analysis_tool(innings, player)
 
+
+    # ---------- DEFAULT ----------
     return call_student1_batting_dashboard(innings, player)
+
+def _force_metric_from_message(message: str, current_metric_type: str) -> str:
+    text = (message or "").lower()
+
+    # ---------- STUDENT 2: Bowling ----------
+    if "bowling" in text or "bowler" in text:
+        if "economy" in text or "expensive" in text:
+            return "bowling_economy_deviation"
+
+        if "wicket" in text or "dismissal" in text:
+            return "wicket_probability_model"
+
+        if "control" in text or "discipline" in text or "entropy" in text:
+            return "control_entropy_model"
+
+        return "full_bowling_analysis"
+
+    # ---------- STUDENT 3: All-rounder ----------
+    if "all-rounder" in text or "all rounder" in text:
+        return "full_all_rounder_analysis"
+
+    if "weighted contribution" in text or "contribution index" in text:
+        return "weighted_contribution_index"
+
+    if "correlation" in text or "batting and bowling move together" in text:
+        return "correlation_analysis"
+
+    if "variance" in text or "reliable" in text or "reliability" in text or "consistent across roles" in text:
+        return "performance_variance_model"
+
+    return current_metric_type
+
+
 
 def run_khel_ai_agent(
     match: Match,
@@ -173,21 +214,28 @@ MATCH CONTEXT:
 
 ADMIN MESSAGE:
 {message}
-
 Available metric types:
+
+# Student 1
 - batting_dashboard
 - consistency_index
 - pressure_performance
 - shot_risk_efficiency
+
+# Student 2
 - bowling_economy_deviation
 - wicket_probability_model
 - control_entropy_model
 - full_bowling_analysis
-- agent_insight
+
+# Student 3
 - weighted_contribution_index
 - correlation_analysis
 - performance_variance_model
 - full_all_rounder_analysis
+
+# fallback
+- agent_insight
 
 Always answer in chat. Set should_create_banner to true only when the admin explicitly asks to show/create/display a banner/card/infographic on the live screen.
 """
@@ -213,9 +261,11 @@ Always answer in chat. Set should_create_banner to true only when the admin expl
     if should_create_banner and allow_create_banner and innings:
         player = _find_player_from_request(banner_request, innings, context)
         if not player:
-            answer = f"{answer}\n\nI could not create the banner because no batting player was available."
+            answer = f"{answer}\n\nI could not create the banner because no suitable player was available for this metric."
         else:
             metric_type = banner_request.get("metric_type") or "batting_dashboard"
+            metric_type = _force_metric_from_message(message, metric_type)
+
             display_area = banner_request.get("display_area") or "between_balls"
 
             if metric_type == "agent_insight":

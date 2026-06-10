@@ -27,7 +27,7 @@ Return ONLY valid JSON:
   "answer": "The actual response to show in the innings scoring chatbot.",
   "should_create_banner": true or false,
   "banner_request": {
-    "metric_type": "batting_dashboard | consistency_index | pressure_performance | shot_risk_efficiency | bowling_economy_deviation | wicket_probability_model | control_entropy_model | full_bowling_analysis | agent_insight weighted_contribution_index | correlation_analysis | performance_variance_model | full_all_rounder_analysis",
+    "metric_type": "batting_dashboard | consistency_index | pressure_performance | shot_risk_efficiency | bowling_economy_deviation | wicket_probability_model | control_entropy_model | full_bowling_analysis | weighted_contribution_index | correlation_analysis | performance_variance_model | full_all_rounder_analysis | agent_insight",
     "player_id": null,
     "display_area": "between_balls | between_overs | main_overlay | bottom_bar",
     "banner_title": "",

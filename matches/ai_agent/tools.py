@@ -243,7 +243,6 @@ def create_temporary_live_banner(
     except Exception as exc:
         return AgentToolResult(False, "create_temporary_live_banner", error=str(exc))
 
-
 def create_api_result_banner(
     innings: Innings,
     player: Player,
@@ -254,9 +253,138 @@ def create_api_result_banner(
     if not tool_result.ok:
         return tool_result
 
-    api_response = tool_result.data.get("api_response", {})
+    api_response = tool_result.data.get("api_response", {}) if tool_result.data else {}
 
-    card_data = api_response.get("data", api_response)
+    title = metric_type.replace("_", " ").title()
+    value = "N/A"
+    label = "Analysis"
+    insight = "API analysis generated successfully."
+    color_hint = "teal"
+
+    # ---------- STUDENT 2 ----------
+    if metric_type == "bowling_economy_deviation":
+        title = "Bowling Economy Deviation"
+        value = api_response.get("normalized_score", "N/A")
+        label = api_response.get("rating", "Economy Analysis")
+        actual = api_response.get("actual_economy")
+        expected = api_response.get("expected_economy")
+        deviation = api_response.get("economy_deviation")
+        insight = (
+            f"Score: {value} | {label} | "
+            f"Actual Econ: {actual} | Expected Econ: {expected} | Deviation: {deviation}"
+        )
+
+    elif metric_type == "wicket_probability_model":
+        title = "Wicket Probability Model"
+        value = api_response.get("probability_score", "N/A")
+        label = api_response.get("rating", "Wicket Probability")
+        probability = api_response.get("wicket_probability")
+        dot_rate = api_response.get("dot_ball_rate")
+        leakage = api_response.get("boundary_leakage")
+        insight = (
+            f"Wicket Threat: {value} | {label} | "
+            f"Probability: {probability} | Dot Rate: {dot_rate} | Boundary Leakage: {leakage}"
+        )
+
+    elif metric_type == "control_entropy_model":
+        title = "Control Entropy Model"
+        value = api_response.get("control_score", "N/A")
+        label = api_response.get("rating", "Control Analysis")
+        entropy = api_response.get("entropy")
+        good_zone_rate = api_response.get("good_zone_rate")
+        insight = (
+            f"Control Score: {value} | {label} | "
+            f"Entropy: {entropy} | Good Zone Rate: {good_zone_rate}"
+        )
+
+    elif metric_type == "full_bowling_analysis":
+        title = "Full Bowling Analysis"
+        value = api_response.get("final_bowling_intelligence_score", "N/A")
+        label = api_response.get("final_rating", "Bowling Analysis")
+
+        economy = api_response.get("economy_analysis", {}).get("normalized_score")
+        wicket = api_response.get("wicket_probability_analysis", {}).get("probability_score")
+        control = api_response.get("control_entropy_analysis", {}).get("control_score")
+
+        insight = (
+            f"Bowling Intelligence: {value} | {label} | "
+            f"Economy: {economy} | Wicket Threat: {wicket} | Control: {control}"
+        )
+
+    # ---------- STUDENT 3 ----------
+    elif metric_type == "weighted_contribution_index":
+        title = "Weighted Contribution Index"
+        value = api_response.get("weighted_contribution_index", "N/A")
+        label = api_response.get("rating", "All-Round Value")
+
+        batting = api_response.get("batting_component")
+        bowling = api_response.get("bowling_component")
+        fielding = api_response.get("fielding_component")
+
+        insight = (
+            f"Contribution: {value} | {label} | "
+            f"Batting: {batting} | Bowling: {bowling} | Fielding: {fielding}"
+        )
+
+    elif metric_type == "correlation_analysis":
+        title = "All-Rounder Correlation"
+        value = api_response.get("correlation_coefficient", "N/A")
+        label = api_response.get("relationship_label", "Correlation Analysis")
+        confidence = api_response.get("confidence_score")
+        strength = api_response.get("relationship_strength_score")
+
+        insight = (
+            f"Correlation: {value} | {label} | "
+            f"Strength: {strength} | Confidence: {confidence}"
+        )
+
+    elif metric_type == "performance_variance_model":
+        title = "Performance Variance Model"
+        value = api_response.get("reliability_score", "N/A")
+        label = api_response.get("reliability_label", "Reliability Analysis")
+
+        batting_cv = api_response.get("batting_coefficient_of_variation")
+        bowling_cv = api_response.get("bowling_coefficient_of_variation")
+
+        insight = (
+            f"Reliability: {value} | {label} | "
+            f"Batting CV: {batting_cv} | Bowling CV: {bowling_cv}"
+        )
+
+    elif metric_type == "full_all_rounder_analysis":
+        title = "Full All-Rounder Analysis"
+        value = api_response.get("final_all_rounder_score", "N/A")
+        label = api_response.get("final_rating", "All-Rounder Analysis")
+
+        contribution = api_response.get("weighted_contribution_analysis", {}).get("weighted_contribution_index")
+        correlation = api_response.get("correlation_analysis", {}).get("correlation_coefficient")
+        reliability = api_response.get("performance_variance_analysis", {}).get("reliability_score")
+
+        insight = (
+            f"All-Rounder Score: {value} | {label} | "
+            f"Contribution: {contribution} | Correlation: {correlation} | Reliability: {reliability}"
+        )
+
+    card_data = {
+        "source": "external_api",
+        "metric_name": metric_type,
+        "score": value,
+        "grade": label,
+        "summary": insight,
+        "card": {
+            "title": title,
+            "value": value,
+            "label": label,
+            "insight": insight,
+            "display_priority": display_area,
+            "color_hint": color_hint,
+            "trend": "stable",
+            "confidence": 0.90,
+        },
+        "raw_data": api_response,
+        "payload_sent": tool_result.data.get("payload_sent", {}),
+        "created_at": timezone.now().isoformat(),
+    }
 
     try:
         return create_temporary_live_banner(
@@ -266,11 +394,10 @@ def create_api_result_banner(
             display_area=display_area,
             card_data=card_data,
         )
-
     except Exception as exc:
         return AgentToolResult(False, "create_api_result_banner", error=str(exc))
 
-
+        
 def call_student2_bowling_economy_tool(innings: Innings, player: Player) -> AgentToolResult:
     try:
         payloads = build_student2_sprint2_payloads(innings, player)
